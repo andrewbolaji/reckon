@@ -32,7 +32,7 @@ jobs:
 
       - name: Install dashboard deps
         working-directory: dashboard
-        run: npm ci
+        run: npm ci --force
 
       - name: Run dashboard tests
         working-directory: dashboard
