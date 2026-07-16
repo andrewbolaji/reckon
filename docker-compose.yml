@@ -2,9 +2,9 @@ services:
   warehouse:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: reckon
-      POSTGRES_USER: reckon
-      POSTGRES_PASSWORD: reckon_dev
+      POSTGRES_DB: ${POSTGRES_DB:-reckon}
+      POSTGRES_USER: ${POSTGRES_USER:-reckon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reckon_dev}
     ports:
       - "5432:5432"
     volumes:
@@ -39,16 +39,16 @@ services:
       mongo:
         condition: service_healthy
     environment:
-      WAREHOUSE_TYPE: postgres
-      POSTGRES_HOST: warehouse
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: reckon
-      POSTGRES_USER: reckon
-      POSTGRES_PASSWORD: reckon_dev
-      DATA_LAKE_TYPE: local
-      DATA_LAKE_PATH: /data/lake
-      MONGO_URI: mongodb://mongo:27017
-      MONGO_DB: reckon
+      WAREHOUSE_TYPE: ${WAREHOUSE_TYPE:-postgres}
+      POSTGRES_HOST: ${POSTGRES_HOST:-warehouse}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-reckon}
+      POSTGRES_USER: ${POSTGRES_USER:-reckon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reckon_dev}
+      DATA_LAKE_TYPE: ${DATA_LAKE_TYPE:-local}
+      DATA_LAKE_PATH: ${DATA_LAKE_PATH:-/data/lake}
+      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
+      MONGO_DB: ${MONGO_DB:-reckon}
     volumes:
       - lake_data:/data/lake
 
@@ -62,11 +62,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      POSTGRES_HOST: warehouse
-      POSTGRES_PORT: "5432"
-      POSTGRES_DB: reckon
-      POSTGRES_USER: reckon
-      POSTGRES_PASSWORD: reckon_dev
+      POSTGRES_HOST: ${POSTGRES_HOST:-warehouse}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-reckon}
+      POSTGRES_USER: ${POSTGRES_USER:-reckon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reckon_dev}
 
   dashboard:
     build:
@@ -86,7 +86,7 @@ services:
       - "3001:3000"
     environment:
       MB_DB_TYPE: h2
-      MB_SETUP_TOKEN: ${MB_SETUP_TOKEN:-a]T1%L@sd}
+      MB_SETUP_TOKEN: ${MB_SETUP_TOKEN:-replace-me-with-a-real-token}
     volumes:
       - metabase_data:/metabase-data
     healthcheck:
