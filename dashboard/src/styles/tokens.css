@@ -1,0 +1,110 @@
+/* ===== Design tokens ===== */
+/* Every component reads from these. Zero hardcoded literals. */
+
+[data-theme="light"] {
+  --bg: #F1EFE8;
+  --card: #FFFFFF;
+  --hero: #141020;
+  --hero-2: #1C1730;
+  --hero-ink: #EFEBF7;
+  --hero-ink-2: #B5AEC9;
+  --hero-ink-3: #9F98B5;
+  --hero-border: transparent;
+  --ink: #151220;
+  --ink-2: #565064;
+  --ink-3: #7A7588;
+  --faint: #B7B2C0;
+  --line: #E6E2D8;
+  --line-2: #DAD5C9;
+  --accent: #6C4CF0;
+  --accent-2: #9B82FF;
+  --accent-soft: rgba(108, 76, 240, 0.12);
+  --good: #12A26B;
+  --good-chip: #0E8A5A;
+  --good-soft: rgba(18, 162, 107, 0.12);
+  --warn: #9B6407;
+  --warn-chip: #9B6407;
+  --warn-soft: rgba(155, 100, 7, 0.14);
+  --bad: #E5503C;
+  --bad-chip: #C43E2C;
+  --bad-soft: rgba(229, 80, 60, 0.12);
+  --stat-accent-bg: linear-gradient(160deg, #fff, #F7F4FF);
+  --stat-accent-border: rgba(108, 76, 240, 0.22);
+  --stat-warn-bg: linear-gradient(160deg, #fff, #FFF8EE);
+  --stat-warn-border: rgba(155, 100, 7, 0.22);
+  --tooltip-bg: var(--card);
+  --tooltip-border: var(--line-2);
+  --tooltip-ink: var(--ink);
+  --live: #57e0a0;
+  --live-soft: rgba(87, 224, 160, 0.18);
+  --pill-bg: rgba(87, 224, 160, 0.16);
+  --r: 18px;
+  --gap: 14px;
+  --maxw: 1180px;
+  --disp: 'Bricolage Grotesque', system-ui, sans-serif;
+  --sans: 'Inter', system-ui, sans-serif;
+}
+
+[data-theme="dark"] {
+  --bg: #0E0C16;
+  --card: #1A1726;
+  --hero: #100D1A;
+  --hero-2: #1C1730;
+  --hero-ink: #EFEBF7;
+  --hero-ink-2: #B5AEC9;
+  --hero-ink-3: #9F98B5;
+  --hero-border: var(--accent-2);
+  --ink: #E8E6F0;
+  --ink-2: #A09BB0;
+  --ink-3: #7E7990;
+  --faint: #4A4560;
+  --line: #2A2636;
+  --line-2: #3A3548;
+  --accent: #9B82FF;
+  --accent-2: #9B82FF;
+  --accent-soft: rgba(155, 130, 255, 0.15);
+  --good: #2BD88A;
+  --good-chip: #2BD88A;
+  --good-soft: rgba(43, 216, 138, 0.14);
+  --warn: #F0A030;
+  --warn-chip: #F0A030;
+  --warn-soft: rgba(240, 160, 48, 0.14);
+  --bad: #F06050;
+  --bad-chip: #F06050;
+  --bad-soft: rgba(240, 96, 80, 0.14);
+  --stat-accent-bg: linear-gradient(160deg, #1A1726, #1E1838);
+  --stat-accent-border: rgba(155, 130, 255, 0.28);
+  --stat-warn-bg: linear-gradient(160deg, #1A1726, #221D18);
+  --stat-warn-border: rgba(240, 160, 48, 0.22);
+  --tooltip-bg: #1A1726;
+  --tooltip-border: var(--line-2);
+  --tooltip-ink: var(--ink);
+  --live: #57e0a0;
+  --live-soft: rgba(87, 224, 160, 0.18);
+  --pill-bg: rgba(87, 224, 160, 0.16);
+  --r: 18px;
+  --gap: 14px;
+  --maxw: 1180px;
+  --disp: 'Bricolage Grotesque', system-ui, sans-serif;
+  --sans: 'Inter', system-ui, sans-serif;
+}
+
+/* ===== Reset + base ===== */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 0.2s, color 0.2s;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
