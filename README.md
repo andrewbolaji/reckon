@@ -6,6 +6,17 @@ Reckon ingests a business's scattered operational data, pipelines it into a ware
 
 ---
 
+## Dashboard
+
+<p align="center">
+  <img src="docs/img/dashboard-light.png" alt="Reckon dashboard — light mode" width="720" />
+</p>
+<p align="center">
+  <img src="docs/img/dashboard-dark.png" alt="Reckon dashboard — dark mode" width="720" />
+</p>
+
+---
+
 ## Architecture
 
 ```mermaid
