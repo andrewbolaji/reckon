@@ -4,7 +4,7 @@ models:
   - name: mart_call_funnel
     description: >
       Daily call-funnel metrics from Aria: total calls, qualified leads,
-      bookings, escalations, and conversion rates.
+      bookings, escalations, conversion rates, and job completion counts.
     columns:
       - name: call_date
         tests:
@@ -27,3 +27,18 @@ models:
       - name: revenue_dollars
         tests:
           - not_null
+
+  - name: mart_jobs
+    description: >
+      Job completion metrics by service category: total jobs,
+      completion rate, and revenue per completed job.
+    columns:
+      - name: service_category
+        tests:
+          - not_null
+          - unique
+      - name: total_jobs
+        tests:
+          - not_null
+      - name: completion_rate_pct
+        description: "Percentage of jobs that reached completed status"

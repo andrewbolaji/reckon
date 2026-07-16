@@ -41,3 +41,19 @@ sources:
             tests:
               - accepted_values:
                   values: ["succeeded", "refunded", "failed"]
+
+      - name: jobs
+        description: "Raw job records from MongoDB"
+        loaded_at_field: "scheduled_at::timestamp"
+        columns:
+          - name: job_id
+            tests:
+              - not_null
+              - unique
+          - name: related_call_id
+            tests:
+              - not_null
+          - name: status
+            tests:
+              - accepted_values:
+                  values: ["scheduled", "completed", "cancelled"]

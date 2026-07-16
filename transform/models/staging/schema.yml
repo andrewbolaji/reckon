@@ -30,3 +30,23 @@ models:
       - name: amount_cents
         tests:
           - not_null
+
+  - name: stg_jobs
+    description: "Cleaned and typed job records from MongoDB"
+    columns:
+      - name: job_id
+        tests:
+          - not_null
+          - unique
+      - name: related_call_id
+        description: "1:1 with booked Aria calls. Unique enforced by test."
+        tests:
+          - not_null
+          - unique
+      - name: job_status
+        tests:
+          - accepted_values:
+              values: ["scheduled", "completed", "cancelled"]
+      - name: job_value
+        tests:
+          - not_null

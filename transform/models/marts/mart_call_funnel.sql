@@ -2,10 +2,25 @@
   Call Funnel Mart
   Aggregates Aria call data into a daily funnel:
   total calls -> qualified -> booked, plus escalation and miss rates.
+  Enriched with job completion counts from the jobs source.
 */
 
 with calls as (
     select * from {{ ref('stg_aria_calls') }}
+),
+
+jobs_agg as (
+    -- Aggregate jobs to the daily-call grain before joining
+    -- so there is no fanout even if the relationship becomes one-to-many.
+    select
+        c.call_timestamp::date as call_date,
+        count(j.job_id)                                         as total_jobs,
+        count(j.job_id) filter (where j.job_status = 'completed')  as completed_jobs,
+        count(j.job_id) filter (where j.job_status = 'cancelled')  as cancelled_jobs
+    from calls c
+    left join {{ ref('stg_jobs') }} j
+        on c.call_id = j.related_call_id
+    group by 1
 ),
 
 daily as (
@@ -24,17 +39,21 @@ daily as (
 )
 
 select
-    call_date,
-    total_calls,
-    qualified,
-    booked,
-    escalated,
-    missed,
-    resolved,
-    avg_duration_seconds,
-    avg_sentiment,
-    round(100.0 * booked / nullif(total_calls, 0), 1)    as booking_rate_pct,
-    round(100.0 * escalated / nullif(total_calls, 0), 1) as escalation_rate_pct,
-    round(100.0 * missed / nullif(total_calls, 0), 1)    as miss_rate_pct
-from daily
-order by call_date
+    d.call_date,
+    d.total_calls,
+    d.qualified,
+    d.booked,
+    d.escalated,
+    d.missed,
+    d.resolved,
+    d.avg_duration_seconds,
+    d.avg_sentiment,
+    round(100.0 * d.booked / nullif(d.total_calls, 0), 1)    as booking_rate_pct,
+    round(100.0 * d.escalated / nullif(d.total_calls, 0), 1) as escalation_rate_pct,
+    round(100.0 * d.missed / nullif(d.total_calls, 0), 1)    as miss_rate_pct,
+    coalesce(j.total_jobs, 0)      as total_jobs,
+    coalesce(j.completed_jobs, 0)  as completed_jobs,
+    coalesce(j.cancelled_jobs, 0)  as cancelled_jobs
+from daily d
+left join jobs_agg j on d.call_date = j.call_date
+order by d.call_date
