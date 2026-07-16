@@ -62,6 +62,7 @@ def call_funnel_summary():
             sum(booked) as total_booked,
             sum(escalated) as total_escalated,
             sum(missed) as total_missed,
+            sum(completed_jobs) as total_completed,
             round(100.0 * sum(booked) / nullif(sum(total_calls), 0), 1) as booking_rate_pct,
             round(100.0 * sum(escalated) / nullif(sum(total_calls), 0), 1) as escalation_rate_pct,
             round(avg(avg_sentiment), 2) as avg_sentiment
@@ -80,6 +81,21 @@ def revenue():
         FROM marts.mart_revenue
         GROUP BY payment_date
         ORDER BY payment_date
+    """)
+
+
+@app.get("/api/jobs/summary")
+def jobs_summary():
+    return query("""
+        SELECT
+            sum(total_jobs) as total_jobs,
+            sum(completed) as total_completed,
+            sum(cancelled) as total_cancelled,
+            sum(scheduled) as total_scheduled,
+            round(100.0 * sum(completed) / nullif(sum(total_jobs), 0), 1)
+                as completion_rate_pct,
+            round(sum(total_completed_value), 2) as total_completed_value
+        FROM marts.mart_jobs
     """)
 
 

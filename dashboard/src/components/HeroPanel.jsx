@@ -35,6 +35,12 @@ export default function HeroPanel({ summary, revenue }) {
           booked
         </div>
         <div>
+          <b className="num">
+            {Number(summary.total_completed || 0).toLocaleString()}
+          </b>
+          completed
+        </div>
+        <div>
           <b className="num">{summary.avg_sentiment}</b>sentiment
         </div>
       </div>
