@@ -27,30 +27,33 @@ SERVICES = {
 STATUSES = ["succeeded", "succeeded", "succeeded", "succeeded", "refunded", "failed"]
 PAYMENT_METHODS = ["card", "card", "card", "ach", "card"]
 
+SEED = 77  # fixed seed for deterministic payment records across runs
 
-def generate_payment_records(n: int = 150, days_back: int = 30) -> list[dict]:
+
+def generate_payment_records(n: int = 150, days_back: int = 30, seed: int = SEED) -> list[dict]:
     """Generate n realistic Stripe-like payment records."""
+    rng = random.Random(seed)
     now = datetime.now(tz=None)  # naive UTC for sample data
     records = []
     for _ in range(n):
-        service = random.choice(list(SERVICES.keys()))
+        service = rng.choice(list(SERVICES.keys()))
         lo, hi = SERVICES[service]
         if hi == 0:
             continue
-        amount = random.randint(lo * 100, hi * 100)  # cents
+        amount = rng.randint(lo * 100, hi * 100)  # cents
         ts = now - timedelta(
-            days=random.randint(0, days_back),
-            hours=random.randint(0, 23),
-            minutes=random.randint(0, 59),
+            days=rng.randint(0, days_back),
+            hours=rng.randint(0, 23),
+            minutes=rng.randint(0, 59),
         )
         records.append({
-            "payment_id": f"pi_{uuid.uuid4().hex[:24]}",
+            "payment_id": f"pi_{uuid.UUID(int=rng.getrandbits(128)).hex[:24]}",
             "timestamp": ts.isoformat(),
             "amount_cents": amount,
             "currency": "usd",
-            "status": random.choice(STATUSES),
-            "payment_method": random.choice(PAYMENT_METHODS),
-            "customer_email": f"customer{random.randint(100,999)}@example.com",
+            "status": rng.choice(STATUSES),
+            "payment_method": rng.choice(PAYMENT_METHODS),
+            "customer_email": f"customer{rng.randint(100,999)}@example.com",
             "description": service,
             "metadata_source": "aria_booking",
         })
