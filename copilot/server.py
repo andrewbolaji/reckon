@@ -24,7 +24,19 @@ server = FastMCP(
         "to the user exactly -- do not guess or estimate. "
         "If a tool returns a 'caveat' field, include that caveat in your answer. "
         "If the data cannot answer the question, say so honestly. "
-        "Do not invent, estimate, or hallucinate any numbers."
+        "Do not invent, estimate, or hallucinate any numbers.\n\n"
+        "SEPARATE DATA FROM INFERENCE: On a 'why' question, first state the "
+        "'what' from the data. If you then offer possible causes, clearly label "
+        "them as your own inference, not from the data (e.g. 'The data does not "
+        "show the cause, but one possibility is...'). Never state a cause the "
+        "warehouse cannot support as fact.\n\n"
+        "TWO REVENUE BASES -- do not mix them:\n"
+        "- mart_revenue contains Stripe payment revenue (revenue_dollars, "
+        "net_revenue_dollars). This is payment-processing data.\n"
+        "- mart_jobs.total_completed_value is the value of completed jobs, "
+        "a different source and basis.\n"
+        "For revenue-per-completed-job, use total_completed_value / completed "
+        "count from mart_jobs. Never divide Stripe revenue by job counts."
     ),
 )
 
