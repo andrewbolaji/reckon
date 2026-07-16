@@ -10,6 +10,8 @@ from copilot.trust_gate import (
     validate_sql,
 )
 
+GENERIC_ERROR = "The query could not be run. Please try again or rephrase your question."
+
 SCHEMA_INFO = {
     "marts.mart_call_funnel": {
         "description": "Daily aggregation of Aria voice agent call metrics with job completion tracking.",
@@ -177,7 +179,18 @@ def tool_revenue_summary(
             {where}
         """
 
-    rows = query(reader_conn, sql, tuple(params) if params else None)
+    try:
+        rows = query(reader_conn, sql, tuple(params) if params else None)
+    except Exception as e:
+        reader_conn.rollback()
+        log_entry({
+            "tool": "revenue_summary",
+            "error": str(e),
+            "sql": sql.strip(),
+            "duration_ms": int((time.time() - start) * 1000),
+        })
+        return {"error": "query_failed", "message": GENERIC_ERROR}
+
     duration_ms = int((time.time() - start) * 1000)
 
     result = {"data": rows, "sql": sql.strip(), "row_count": len(rows)}
@@ -243,7 +256,18 @@ def tool_call_funnel(
         {where}
     """
 
-    rows = query(reader_conn, sql, tuple(params) if params else None)
+    try:
+        rows = query(reader_conn, sql, tuple(params) if params else None)
+    except Exception as e:
+        reader_conn.rollback()
+        log_entry({
+            "tool": "call_funnel",
+            "error": str(e),
+            "sql": sql.strip(),
+            "duration_ms": int((time.time() - start) * 1000),
+        })
+        return {"error": "query_failed", "message": GENERIC_ERROR}
+
     duration_ms = int((time.time() - start) * 1000)
 
     result = {"data": rows, "sql": sql.strip(), "row_count": len(rows)}
@@ -302,7 +326,18 @@ def tool_job_completion(
         ORDER BY total_completed_value DESC
     """
 
-    rows = query(reader_conn, sql, tuple(params) if params else None)
+    try:
+        rows = query(reader_conn, sql, tuple(params) if params else None)
+    except Exception as e:
+        reader_conn.rollback()
+        log_entry({
+            "tool": "job_completion",
+            "error": str(e),
+            "sql": sql.strip(),
+            "duration_ms": int((time.time() - start) * 1000),
+        })
+        return {"error": "query_failed", "message": GENERIC_ERROR}
+
     duration_ms = int((time.time() - start) * 1000)
 
     result = {"data": rows, "sql": sql.strip(), "row_count": len(rows)}
@@ -357,14 +392,13 @@ def tool_query_marts(
         rows = query(reader_conn, capped_sql)
     except Exception as e:
         reader_conn.rollback()
-        result = {"error": "query_failed", "message": str(e), "sql": capped_sql}
         log_entry({
             "tool": "query_marts",
             "error": str(e),
             "sql": capped_sql,
             "duration_ms": int((time.time() - start) * 1000),
         })
-        return result
+        return {"error": "query_failed", "message": GENERIC_ERROR}
 
     duration_ms = int((time.time() - start) * 1000)
 

@@ -1,10 +1,11 @@
 """Security tests: injection, privilege escalation, adversarial inputs."""
 
+import json
 import pytest
 import psycopg2
 
 from copilot.trust_gate import validate_sql
-from copilot.tools import tool_query_marts
+from copilot.tools import GENERIC_ERROR, tool_query_marts
 from copilot.tests.conftest import requires_db
 
 
@@ -116,3 +117,37 @@ class TestQueryMartsToolSecurity:
         captured = capsys.readouterr()
         assert "query_marts" in captured.err
         assert "rejected" in captured.err.lower() or "Forbidden" in captured.err
+
+
+@requires_db
+class TestErrorSanitization:
+
+    def test_query_error_returns_generic_message(self, admin_conn, reader_conn):
+        """A query that triggers a DB error returns a generic message, not raw internals."""
+        result = tool_query_marts(
+            admin_conn, reader_conn,
+            "SELECT nonexistent_column FROM marts.mart_revenue",
+        )
+        assert result["error"] == "query_failed"
+        assert result["message"] == GENERIC_ERROR
+        assert "nonexistent_column" not in result["message"]
+        assert "column" not in result["message"].lower()
+
+    def test_query_error_logs_detail_to_stderr(self, admin_conn, reader_conn, capsys):
+        """The real error detail goes to the audit log (stderr), not to the user."""
+        tool_query_marts(
+            admin_conn, reader_conn,
+            "SELECT nonexistent_column FROM marts.mart_revenue",
+        )
+        captured = capsys.readouterr()
+        log_line = captured.err.strip().split("\n")[-1]
+        log = json.loads(log_line)
+        assert "nonexistent_column" in log["error"]
+
+    def test_error_result_has_no_sql(self, admin_conn, reader_conn):
+        """Error results must not leak the SQL that was executed."""
+        result = tool_query_marts(
+            admin_conn, reader_conn,
+            "SELECT nonexistent_column FROM marts.mart_revenue",
+        )
+        assert "sql" not in result
