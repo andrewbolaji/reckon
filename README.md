@@ -478,7 +478,36 @@ Safety lives in the tools and the database role, not in the prompt:
 2. **SQL validator** (defense in depth): rejects DDL, DML, multi-statement input, and references to non-allowlisted tables before the query reaches the database.
 3. **Read-only session**: the connection is set to `READ ONLY` mode, so writes fail even if the role somehow allowed them.
 4. **Row cap and timeout**: maximum 100 rows per query, 5-second timeout.
-5. **Audit log**: every tool call, query, and refusal is logged as structured JSON to stderr.
+5. **Error sanitization**: database errors return a generic message to the user; raw error details (table names, column names, query text) go only to the server-side audit log.
+6. **Parameterized queries**: all tool-generated SQL uses `%s` placeholders -- user-supplied filter values never touch the query string.
+7. **Audit log**: every tool call, query, and refusal is logged as structured JSON to stderr.
+
+### Threat Model
+
+#### Assets
+
+- **Warehouse marts** -- aggregated business metrics (revenue, calls, jobs). No PII in marts; raw schema contains customer emails but is inaccessible to the copilot role.
+- **Database credentials** -- the `reckon_reader` role password and the admin connection credentials.
+- **The `reckon_reader` role itself** -- its privilege boundary is the primary security control.
+
+#### Threats and mitigations
+
+| Threat | Mitigation |
+|--------|------------|
+| **SQL injection** (user crafts input that alters query logic) | Parameterized queries (`%s` placeholders) for all filter values; SQL validator rejects DDL/DML/multi-statement; DB role blocks access to non-marts tables even if validation is bypassed. |
+| **Direct prompt injection** (user asks the LLM to ignore instructions) | Safety is in the tools and DB role, not the prompt. The LLM can only call the defined tools, each of which enforces its own guardrails. The worst case is a bad answer, not a data breach. |
+| **Indirect / data-borne prompt injection** (malicious content in warehouse data tricks the LLM) | See residual risks below. |
+| **Data exfiltration** (extracting raw/staging data through the copilot) | `reckon_reader` has no grants on `raw` or `staging` schemas. The SQL validator rejects references to non-allowlisted tables. Row cap limits bulk extraction from marts. |
+| **Privilege escalation** (gaining write access or admin privileges) | Read-only session mode, read-only DB role, no GRANT/ALTER/CREATE permissions. Tested with 5 role-enforcement tests. |
+| **Stale-data trust** (answering with outdated numbers as if current) | Freshness trust gate checks `_loaded_at` timestamps: >48h refuses, 24-48h adds caveat. Gate runs before every data tool. |
+| **Information disclosure** (DB error messages leak schema internals) | Error sanitization returns a generic message; raw details go only to the server-side audit log. |
+
+#### Residual risks (stated honestly)
+
+- **Indirect prompt injection**: if an attacker can write data that ends up in a mart (e.g. a malicious service description), the LLM might follow embedded instructions. No runtime content filter is in place. Mitigation depends on input validation upstream of the warehouse.
+- **No request rate limiting**: a user (or automated client) can call tools as fast as the MCP transport allows. No per-user or per-minute throttle exists. In production, add rate limiting at the transport or API gateway layer.
+- **Single-tenant demo**: there is one DB role, one set of credentials, and no multi-tenant row-level security. All users see all marts data. Production would need tenant isolation.
+- **Credential storage**: DB passwords are passed via environment variables and `.env` files, not a secrets manager. Acceptable for local dev; production should use AWS Secrets Manager or equivalent.
 
 ### Run Copilot Tests
 
@@ -553,7 +582,7 @@ The pipeline uses `dbt build`, which runs tests inline — a failing test stops 
 - [x] Freshness gate based on pipeline load time (`_loaded_at`), not event timestamps
 - [x] CLI REPL demo: grounded answers with the query and rows shown alongside every answer
 - [x] Claude Desktop integration documented
-- [x] 57 tests: security (injection, privilege escalation), trust gate (freshness, SQL validation), tool correctness
+- [x] 60 tests: security (injection, privilege escalation, error sanitization), trust gate (freshness, SQL validation), tool correctness
 - [ ] Conversation memory and follow-up queries
 
 ## Tech Stack
