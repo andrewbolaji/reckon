@@ -20,10 +20,14 @@ jobs:
       - name: Install Python deps
         run: |
           pip install -r ingest/requirements.txt
+          pip install -r copilot/requirements.txt
           pip install pytest
 
       - name: Run extractor tests
         run: pytest ingest/tests/ -v
+
+      - name: Run copilot unit tests (no DB required)
+        run: pytest copilot/tests/test_trust_gate.py::TestSqlValidation copilot/tests/test_trust_gate.py::TestRowCap copilot/tests/test_tools.py::TestDescribeSchema copilot/tests/test_security.py::TestSqlInjection -v
 
       - name: Set up Node
         uses: actions/setup-node@v4

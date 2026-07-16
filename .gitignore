@@ -12,6 +12,9 @@ data/lake/
 *.egg-info/
 .DS_Store
 
+# Logs
+*.log
+
 # Terraform
 .terraform/
 *.tfstate

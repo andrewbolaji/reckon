@@ -75,3 +75,45 @@ The pipeline runs automatically when you start the stack with `docker compose up
 6. Runs all data quality tests (uniqueness, not-null, accepted values, freshness)
 
 If any test fails, downstream models are blocked. This is the data trust gate.
+
+## AI Copilot
+
+The copilot lets you ask questions about your business data in plain English. It connects to the same warehouse marts the dashboard uses and shows you the exact query behind every answer.
+
+### How to use it
+
+1. Make sure the docker stack is running (`docker compose up --build`)
+2. Install copilot dependencies: `pip install -r copilot/requirements.txt`
+3. Set your Anthropic API key: `export ANTHROPIC_API_KEY=sk-ant-...`
+4. Run the REPL: `python -m copilot.cli`
+
+### Questions it can answer
+
+- "How much revenue last week?" -- uses the revenue_summary tool
+- "Which service makes the most money?" -- uses revenue_summary grouped by service
+- "What's my booking rate?" -- uses the call_funnel tool
+- "How are job completions looking?" -- uses the job_completion tool
+- "Is my data fresh?" -- uses the check_freshness tool
+- "What's the average ticket size for plumbing?" -- falls back to the guarded SQL tool
+
+### Questions it will refuse
+
+- **Stale data**: if the pipeline has not run in over 48 hours, the copilot tells you the data is stale and asks you to run the pipeline. It will not guess.
+- **Out-of-scope questions**: if the marts do not have the data to answer (for example, "who is my biggest customer by name"), the copilot says so instead of making something up.
+- **Adversarial prompts**: asking it to "ignore your instructions" or "just estimate a number" will not work. The tools enforce what data is available, and every number must come from a tool result.
+
+### How it stays safe
+
+- The copilot connects to the database with a restricted role (`reckon_reader`) that can only SELECT from the marts schema. It cannot read raw data, staging data, or system tables.
+- Every SQL query is validated before execution: no DDL, no DML, no multi-statement input, no tables outside the marts allowlist.
+- Every tool call is logged as structured JSON for audit.
+- The freshness gate checks when the pipeline last loaded data (not when events happened), so the check stays accurate even with fixed seed data.
+
+### Warn vs. error
+
+- **24 to 48 hours since last load**: the copilot answers but includes a note about the data age.
+- **Over 48 hours**: the copilot refuses and tells you to run the pipeline.
+
+### Using with Claude Desktop
+
+You can also wire the copilot into Claude Desktop as an MCP server. See the README for the config JSON to add to your `claude_desktop_config.json`.

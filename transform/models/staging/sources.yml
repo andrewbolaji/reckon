@@ -6,7 +6,7 @@ sources:
     freshness:
       warn_after: {count: 24, period: hour}
       error_after: {count: 48, period: hour}
-    loaded_at_field: "timestamp::timestamp"
+    loaded_at_field: "_loaded_at"
     tables:
       - name: aria_calls
         description: "Raw Aria AI voice-agent call records"
@@ -44,7 +44,7 @@ sources:
 
       - name: jobs
         description: "Raw job records from MongoDB"
-        loaded_at_field: "scheduled_at::timestamp"
+        loaded_at_field: "_loaded_at"
         columns:
           - name: job_id
             tests:

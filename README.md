@@ -144,7 +144,8 @@ Reckon/
 │   └── src/components/      # KPI cards, funnel chart, revenue chart
 ├── mongo/init/              # MongoDB seed data and init script
 ├── metabase/                # Metabase setup script
-├── mcp/                     # MCP copilot server (Phase 4)
+├── copilot/                 # MCP copilot server (AI Q&A over warehouse)
+│   ├── tests/               # Trust gate, security, and tool correctness tests
 ├── infra/
 │   ├── terraform/           # AWS infrastructure (VPC, EKS, Redshift, S3, ECR, IAM)
 │   ├── helm/reckon/         # Helm chart (API, dashboard, pipeline CronJob)
@@ -277,6 +278,120 @@ docker compose up --build   # or: make local
 
 ---
 
+## AI Copilot
+
+The copilot lets a non-technical owner ask plain-English questions and get answers grounded in the warehouse marts. Every answer is auditable: the tool called, the SQL query, and the rows returned are shown alongside the response.
+
+### Quick Start
+
+```bash
+# Install copilot deps
+pip install -r copilot/requirements.txt
+
+# Set your API key
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# With docker compose running:
+python -m copilot.cli
+```
+
+### Example Session
+
+```
+You: What's my booking rate?
+
+  Tool: call_funnel
+  Input: {}
+  SQL: SELECT sum(total_calls) AS total_calls, sum(booked) AS booked, ...
+       FROM marts.mart_call_funnel
+  Rows: 1
+
+Answer:
+Your overall booking rate is 42.0%. Out of 200 total calls, 84 resulted
+in a booking.
+```
+
+### Stale Data Refusal
+
+When the pipeline has not run recently (>48 hours), the copilot refuses to answer rather than give stale numbers:
+
+```
+You: How much revenue last week?
+
+  Tool: revenue_summary
+  Input: {"date_from": "2026-07-07", "date_to": "2026-07-13"}
+  Error: Cannot answer: aria_calls data is stale (52h old, threshold is
+         48h). Please run the pipeline before querying.
+
+Answer:
+I can't answer that right now. The data is stale -- aria_calls was last
+loaded 52 hours ago, which is past the 48-hour threshold. Please run the
+pipeline first to refresh the data.
+```
+
+### Out-of-Scope Refusal
+
+When asked something the marts cannot answer, the copilot says so honestly:
+
+```
+You: Who is my biggest customer by name?
+
+Answer:
+I can't answer that from the data I have. The marts tables track revenue
+by service type and payment method, but they don't include customer names
+or individual customer-level breakdowns.
+```
+
+### Claude Desktop Integration
+
+Add this to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "reckon": {
+      "command": "python",
+      "args": ["-m", "copilot.server"],
+      "cwd": "/path/to/Reckon",
+      "env": {
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "reckon",
+        "POSTGRES_USER": "reckon",
+        "POSTGRES_PASSWORD": "reckon_dev",
+        "COPILOT_DB_USER": "reckon_reader",
+        "COPILOT_DB_PASSWORD": "reckon_reader_dev"
+      }
+    }
+  }
+}
+```
+
+### Security Model
+
+Safety lives in the tools and the database role, not in the prompt:
+
+1. **DB role enforcement** (load-bearing): the `reckon_reader` Postgres role has `SELECT` on the `marts` schema only. No access to `raw`, `staging`, or system catalogs. Even if the SQL validator misses something, the database blocks it.
+2. **SQL validator** (defense in depth): rejects DDL, DML, multi-statement input, and references to non-allowlisted tables before the query reaches the database.
+3. **Read-only session**: the connection is set to `READ ONLY` mode, so writes fail even if the role somehow allowed them.
+4. **Row cap and timeout**: maximum 100 rows per query, 5-second timeout.
+5. **Audit log**: every tool call, query, and refusal is logged as structured JSON to stderr.
+
+### Run Copilot Tests
+
+```bash
+# All tests (requires docker compose up)
+pytest copilot/tests/ -v
+
+# Unit tests only (no DB required)
+pytest copilot/tests/test_trust_gate.py::TestSqlValidation \
+       copilot/tests/test_trust_gate.py::TestRowCap \
+       copilot/tests/test_tools.py::TestDescribeSchema \
+       copilot/tests/test_security.py::TestSqlInjection -v
+```
+
+---
+
 ## Data Pipeline
 
 1. **Extract** — Python extractors pull data from three sources: Aria call records, Stripe payments, and MongoDB service jobs
@@ -327,11 +442,15 @@ The pipeline uses `dbt build`, which runs tests inline — a failing test stops 
 - [ ] Loki for centralized logging
 - [ ] Alerting (PagerDuty / Slack integration)
 
-### Phase 4 — AI Copilot
-- [ ] MCP server exposing warehouse schema and safe query tool
-- [ ] Read-only SQL guardrails (query validation, row limits)
-- [ ] Trust-gate enforcement: copilot refuses to answer from stale/failing data
-- [ ] Natural-language Q&A over business data via Claude
+### Phase 4 — AI Copilot (current)
+- [x] MCP server (6 tools: revenue, call funnel, jobs, freshness, schema, guarded SQL)
+- [x] Read-only SQL guardrails (query validation, row cap, statement timeout, allowlisted tables)
+- [x] Read-only DB role (`reckon_reader`): SELECT on marts only, no raw or staging access
+- [x] Trust-gate enforcement: stale data (>48h) produces a refusal, not a guess; warn (24-48h) adds a caveat
+- [x] Freshness gate based on pipeline load time (`_loaded_at`), not event timestamps
+- [x] CLI REPL demo: grounded answers with the query and rows shown alongside every answer
+- [x] Claude Desktop integration documented
+- [x] 57 tests: security (injection, privilege escalation), trust gate (freshness, SQL validation), tool correctness
 - [ ] Conversation memory and follow-up queries
 
 ## Tech Stack
@@ -352,7 +471,7 @@ The pipeline uses `dbt build`, which runs tests inline — a failing test stops 
 | Registry      | AWS ECR                                 |
 | Networking    | VPC, NAT Gateway, Security Groups, IAM  |
 | CI/CD         | GitHub Actions, Makefile                |
-| AI (Phase 4)  | MCP, Claude                             |
+| AI Copilot    | MCP, Claude, Anthropic SDK               |
 
 ---
 

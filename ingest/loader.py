@@ -34,6 +34,7 @@ def load_to_warehouse(
     cur.execute(f"CREATE SCHEMA IF NOT EXISTS raw;")
 
     col_defs = ", ".join(f"{c} TEXT" for c in columns)
+    col_defs += ", _loaded_at TIMESTAMP DEFAULT now()"
     cur.execute(f"CREATE TABLE IF NOT EXISTS raw.{table} ({col_defs});")
     cur.execute(f"TRUNCATE raw.{table};")
 
