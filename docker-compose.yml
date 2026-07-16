@@ -1,0 +1,65 @@
+services:
+  warehouse:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: reckon
+      POSTGRES_USER: reckon
+      POSTGRES_PASSWORD: reckon_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./warehouse/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reckon"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: infra/docker/pipeline.Dockerfile
+    depends_on:
+      warehouse:
+        condition: service_healthy
+    environment:
+      WAREHOUSE_TYPE: postgres
+      POSTGRES_HOST: warehouse
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: reckon
+      POSTGRES_USER: reckon
+      POSTGRES_PASSWORD: reckon_dev
+      DATA_LAKE_TYPE: local
+      DATA_LAKE_PATH: /data/lake
+    volumes:
+      - lake_data:/data/lake
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_HOST: warehouse
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: reckon
+      POSTGRES_USER: reckon
+      POSTGRES_PASSWORD: reckon_dev
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "5173:5173"
+
+volumes:
+  pgdata:
+  lake_data:

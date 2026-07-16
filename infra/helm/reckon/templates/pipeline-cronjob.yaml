@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "reckon.fullname" . }}-pipeline
+  labels:
+    {{- include "reckon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pipeline
+spec:
+  schedule: {{ .Values.pipeline.schedule | quote }}
+  successfulJobsHistoryLimit: {{ .Values.pipeline.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.pipeline.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/component: pipeline
+            app.kubernetes.io/instance: {{ .Release.Name }}
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pipeline
+              image: {{ .Values.images.pipeline }}
+              imagePullPolicy: {{ .Values.images.pullPolicy }}
+              envFrom:
+                - secretRef:
+                    name: {{ include "reckon.fullname" . }}-secrets
+              env:
+                - name: DBT_TARGET
+                  value: {{ .Values.pipeline.dbtTarget | quote }}
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 512Mi
+                limits:
+                  cpu: "1"
+                  memory: 1Gi

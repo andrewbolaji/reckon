@@ -1,0 +1,58 @@
+# ---- Images ----
+images:
+  pipeline: reckon-pipeline:latest
+  api: reckon-api:latest
+  dashboard: reckon-dashboard:latest
+  pullPolicy: IfNotPresent
+
+# ---- Warehouse ----
+warehouse:
+  type: redshift      # "postgres" for local, "redshift" for cloud
+  host: ""            # Set via --set or values-prod.yaml
+  port: "5439"
+  db: "reckon"
+  user: "reckon_admin"
+  password: ""        # Set via K8s Secret or --set
+
+# ---- Data Lake ----
+lake:
+  type: s3            # "local" or "s3"
+  bucket: ""          # Set via --set
+  region: "us-east-1"
+
+# ---- Pipeline CronJob ----
+pipeline:
+  schedule: "0 */6 * * *"   # Every 6 hours
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  dbtTarget: prod
+
+# ---- API ----
+api:
+  replicas: 2
+  port: 8000
+  service:
+    type: LoadBalancer
+    port: 80
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+# ---- Dashboard ----
+dashboard:
+  replicas: 2
+  port: 5173
+  service:
+    type: LoadBalancer
+    port: 80
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi

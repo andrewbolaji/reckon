@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-extractors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install psycopg2-binary boto3 pytest
+      - name: Run extractor tests
+        run: pytest ingest/tests/ -v
+
+  test-dbt:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: reckon
+          POSTGRES_USER: reckon
+          POSTGRES_PASSWORD: reckon_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U reckon"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          pip install psycopg2-binary boto3 dbt-core==1.8.7 dbt-postgres==1.8.2
+      - name: Run ingestion pipeline
+        env:
+          WAREHOUSE_TYPE: postgres
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: "5432"
+          POSTGRES_DB: reckon
+          POSTGRES_USER: reckon
+          POSTGRES_PASSWORD: reckon_dev
+          DATA_LAKE_TYPE: local
+          DATA_LAKE_PATH: /tmp/lake
+        run: python -m ingest.pipeline
+      - name: Install dbt packages
+        working-directory: transform
+        run: dbt deps --profiles-dir .
+      - name: Run dbt build (models + tests)
+        working-directory: transform
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: "5432"
+          POSTGRES_DB: reckon
+          POSTGRES_USER: reckon
+          POSTGRES_PASSWORD: reckon_dev
+        run: dbt build --profiles-dir . --full-refresh
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Lint Python
+        run: ruff check ingest/ api/

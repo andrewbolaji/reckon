@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: stg_aria_calls
+    description: "Cleaned and typed Aria call records"
+    columns:
+      - name: call_id
+        tests:
+          - not_null
+          - unique
+      - name: call_timestamp
+        tests:
+          - not_null
+      - name: urgency
+        tests:
+          - accepted_values:
+              values: ["low", "medium", "high", "critical"]
+      - name: outcome
+        tests:
+          - accepted_values:
+              values: ["booked", "qualified", "escalated", "missed", "resolved"]
+
+  - name: stg_stripe_payments
+    description: "Cleaned and typed Stripe payment records (failed payments excluded)"
+    columns:
+      - name: payment_id
+        tests:
+          - not_null
+          - unique
+      - name: amount_cents
+        tests:
+          - not_null

@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: mart_call_funnel
+    description: >
+      Daily call-funnel metrics from Aria: total calls, qualified leads,
+      bookings, escalations, and conversion rates.
+    columns:
+      - name: call_date
+        tests:
+          - not_null
+          - unique
+      - name: total_calls
+        tests:
+          - not_null
+      - name: booking_rate_pct
+        description: "Percentage of calls that resulted in a booking"
+
+  - name: mart_revenue
+    description: >
+      Daily revenue aggregation by service and payment method,
+      including refunds and net revenue.
+    columns:
+      - name: payment_date
+        tests:
+          - not_null
+      - name: revenue_dollars
+        tests:
+          - not_null
