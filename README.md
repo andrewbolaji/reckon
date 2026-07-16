@@ -295,51 +295,154 @@ export ANTHROPIC_API_KEY=sk-ant-...
 python -m copilot.cli
 ```
 
-### Example Session
+### Example Sessions
+
+The transcripts below are real -- captured by running `python -m copilot.cli` against
+the live warehouse. Every number is verified against a direct SQL query.
+
+**What's my booking rate?**
 
 ```
-You: What's my booking rate?
+============================================================
+Question: What's my booking rate?
+============================================================
 
   Tool: call_funnel
   Input: {}
-  SQL: SELECT sum(total_calls) AS total_calls, sum(booked) AS booked, ...
+  SQL: SELECT
+           sum(total_calls) AS total_calls,
+           sum(booked) AS booked,
+           sum(qualified) AS qualified,
+           sum(escalated) AS escalated,
+           sum(missed) AS missed,
+           sum(resolved) AS resolved,
+           round(100.0 * sum(booked) / nullif(sum(total_calls), 0), 1) AS booking_rate_pct,
+           round(100.0 * sum(escalated) / nullif(sum(total_calls), 0), 1) AS escalation_rate_pct,
+           round(avg(avg_sentiment), 2) AS avg_sentiment,
+           sum(total_jobs) AS total_jobs,
+           sum(completed_jobs) AS completed_jobs,
+           sum(cancelled_jobs) AS cancelled_jobs
        FROM marts.mart_call_funnel
   Rows: 1
 
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Answer:
-Your overall booking rate is 42.0%. Out of 200 total calls, 84 resulted
-in a booking.
+Your overall booking rate is 41.5%. Out of 200 total calls, 83 resulted
+in a booking. Average caller sentiment is 0.67 / 1.0.
 ```
+
+Direct query confirmation: `SELECT sum(total_calls), sum(booked) FROM marts.mart_call_funnel` -> 200 calls, 83 booked, 41.5%.
+
+---
+
+**Which service makes the most money?**
+
+```
+============================================================
+Question: Which service makes the most money?
+============================================================
+
+  Tool: revenue_summary
+  Input: {"group_by": "service"}
+  SQL: SELECT
+           service_description,
+           sum(transaction_count) AS transaction_count,
+           round(sum(revenue_dollars), 2) AS revenue_dollars,
+           round(sum(net_revenue_dollars), 2) AS net_revenue_dollars,
+           round(avg(avg_ticket_dollars), 2) AS avg_ticket_dollars,
+           sum(refund_count) AS refund_count
+       FROM marts.mart_revenue
+       GROUP BY service_description
+       ORDER BY revenue_dollars DESC
+  Rows: 9
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Answer:
+Panel Upgrade is your top earner at $28,918.09 gross ($22,724.05 net)
+across 17 transactions. Water Heater Replacement has the highest average
+ticket at $1,801.68 per job. Emergency Gas Leak ranks third at $10,600.01.
+```
+
+Direct query confirmation: `SELECT service_description, sum(revenue_dollars) FROM marts.mart_revenue GROUP BY 1 ORDER BY 2 DESC LIMIT 1` -> Panel Upgrade, $28,918.09.
+
+---
+
+**How much revenue in the last 30 days?**
+
+```
+============================================================
+Question: How much revenue in the last 30 days?
+============================================================
+
+  Tool: check_freshness
+  Input: {}
+
+  Tool: revenue_summary
+  Input: {"date_from": "2026-06-16", "date_to": "2026-07-16"}
+  SQL: SELECT
+           sum(transaction_count) AS transaction_count,
+           round(sum(revenue_dollars), 2) AS revenue_dollars,
+           round(sum(net_revenue_dollars), 2) AS net_revenue_dollars,
+           round(avg(avg_ticket_dollars), 2) AS avg_ticket_dollars,
+           sum(refund_count) AS refund_count,
+           round(sum(refund_dollars), 2) AS refund_dollars
+       FROM marts.mart_revenue
+       WHERE payment_date >= %s AND payment_date <= %s
+  Rows: 1
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Answer:
+For June 16 - July 16, 2026: gross revenue $92,296.73, net revenue
+$68,780.39 across 121 transactions (avg ticket $736.41). Refunds totalled
+$23,516.34 across 30 events.
+```
+
+Direct query confirmation: `SELECT sum(revenue_dollars), sum(net_revenue_dollars), sum(transaction_count) FROM marts.mart_revenue WHERE payment_date >= '2026-06-16'` -> $92,296.73 gross / $68,780.39 net / 121 txns.
 
 ### Stale Data Refusal
 
-When the pipeline has not run recently (>48 hours), the copilot refuses to answer rather than give stale numbers:
+When the pipeline has not run recently (>48 hours), the copilot refuses to answer rather
+than give stale numbers. Reproduced by running
+`UPDATE raw.aria_calls SET _loaded_at = now() - interval '50 hours'`:
 
 ```
-You: How much revenue last week?
+============================================================
+Question: How much revenue last week?
+============================================================
+
+  Tool: check_freshness
+  Input: {}
 
   Tool: revenue_summary
-  Input: {"date_from": "2026-07-07", "date_to": "2026-07-13"}
-  Error: Cannot answer: aria_calls data is stale (52h old, threshold is
-         48h). Please run the pipeline before querying.
+  Input: {"date_from": "2026-07-06", "date_to": "2026-07-12"}
+  Error: Cannot answer: data is stale. aria_calls: stale (50h old,
+         threshold is 48h). Please run the pipeline before querying.
 
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Answer:
-I can't answer that right now. The data is stale -- aria_calls was last
-loaded 52 hours ago, which is past the 48-hour threshold. Please run the
-pipeline first to refresh the data.
+Cannot answer: data is stale. aria_calls: stale (50h old, threshold is
+48h). Please run the pipeline before querying.
 ```
+
+After restoring `_loaded_at` to `now()` the same question returns $23,501.67 gross /
+$19,634.33 net / 38 transactions (confirmed: direct query matches exactly).
 
 ### Out-of-Scope Refusal
 
 When asked something the marts cannot answer, the copilot says so honestly:
 
 ```
-You: Who is my biggest customer by name?
+============================================================
+Question: Who is my biggest customer by name?
+============================================================
 
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Answer:
-I can't answer that from the data I have. The marts tables track revenue
-by service type and payment method, but they don't include customer names
-or individual customer-level breakdowns.
+Customer-level data is not available through any of my tools. The mart
+tables (mart_revenue, mart_call_funnel, mart_jobs) aggregate by service
+category, payment method, and date -- they do not contain customer names
+or IDs. To find your biggest customer by name, query your CRM or Stripe
+customer records directly.
 ```
 
 ### Claude Desktop Integration

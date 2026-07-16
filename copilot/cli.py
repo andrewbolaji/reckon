@@ -3,6 +3,7 @@
 import json
 import os
 import sys
+from datetime import date
 
 import anthropic
 
@@ -16,18 +17,21 @@ from copilot.tools import (
     tool_revenue_summary,
 )
 
-MODEL = "claude-sonnet-4-20250514"
+MODEL = "claude-sonnet-4-6"
 
-SYSTEM_PROMPT = (
-    "You are a business intelligence copilot for a home-services company. "
-    "You answer questions using ONLY the data returned by your tools. "
-    "Every number in your answer must come from a tool result. "
-    "If a tool returns a 'data_stale' error, relay the refusal message "
-    "to the user exactly -- do not guess or estimate. "
-    "If a tool returns a 'caveat' field, include that caveat in your answer. "
-    "If the data cannot answer the question, say so honestly. "
-    "Do not invent, estimate, or hallucinate any numbers."
-)
+def _system_prompt() -> str:
+    today = date.today().isoformat()
+    return (
+        f"Today's date is {today}. "
+        "You are a business intelligence copilot for a home-services company. "
+        "You answer questions using ONLY the data returned by your tools. "
+        "Every number in your answer must come from a tool result. "
+        "If a tool returns a 'data_stale' error, relay the refusal message "
+        "to the user exactly -- do not guess or estimate. "
+        "If a tool returns a 'caveat' field, include that caveat in your answer. "
+        "If the data cannot answer the question, say so honestly. "
+        "Do not invent, estimate, or hallucinate any numbers."
+    )
 
 TOOLS = [
     {
@@ -197,7 +201,7 @@ def ask(client: anthropic.Anthropic, question: str) -> None:
         response = client.messages.create(
             model=MODEL,
             max_tokens=1024,
-            system=SYSTEM_PROMPT,
+            system=_system_prompt(),
             tools=TOOLS,
             messages=messages,
         )
