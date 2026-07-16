@@ -2,7 +2,7 @@
 
 **A business-intelligence platform with an AI copilot** — by [AIntellect](https://github.com/AIntellect).
 
-Reckon ingests a business's scattered operational data, pipelines it into a warehouse, surfaces dashboards, and lets a non-technical owner ask questions in plain English. One of its data sources is **Aria**, our live AI voice agent, so call data (volume, urgency, bookings, escalations) flows in alongside payments and jobs.
+Reckon ingests a business's scattered operational data, pipelines it into a warehouse, surfaces dashboards, and lets a non-technical owner ask questions in plain English. Data flows in from three sources: **Aria** (AI voice agent call records), **Stripe** (payment transactions), and **MongoDB** (service job records). Metabase provides self-serve BI alongside the custom React dashboard.
 
 ---
 
@@ -13,6 +13,7 @@ graph TB
     subgraph Sources
         A[Aria Voice Agent<br/>Call Records]
         B[Stripe<br/>Payments]
+        O[MongoDB<br/>Service Jobs]
     end
 
     subgraph "Ingestion Layer"
@@ -34,7 +35,7 @@ graph TB
     subgraph "Serving Layer"
         J[FastAPI]
         K[React Dashboard]
-        L[Metabase — Phase 3]
+        L[Metabase]
     end
 
     subgraph "AI Copilot — Phase 4"
@@ -44,6 +45,7 @@ graph TB
 
     A --> C
     B --> C
+    O --> C
     C --> D
     D --> E
     E --> I
@@ -53,6 +55,7 @@ graph TB
     H --> I
     I --> J
     J --> K
+    I --> L
     I --> M
     M --> N
 
@@ -113,7 +116,7 @@ graph TB
 ```
 Reckon/
 ├── ingest/                  # Python extractors and data-lake writers
-│   ├── extractors/          # Per-source extractors (Aria, Stripe)
+│   ├── extractors/          # Per-source extractors (Aria, Stripe, MongoDB)
 │   ├── tests/               # Extractor unit tests
 │   ├── config.py            # Config loader (env-var driven)
 │   ├── lake.py              # Data-lake abstraction (local / S3)
@@ -128,6 +131,8 @@ Reckon/
 ├── api/                     # FastAPI serving layer
 ├── dashboard/               # React + Recharts dashboard
 │   └── src/components/      # KPI cards, funnel chart, revenue chart
+├── mongo/init/              # MongoDB seed data and init script
+├── metabase/                # Metabase setup script
 ├── mcp/                     # MCP copilot server (Phase 4)
 ├── infra/
 │   ├── terraform/           # AWS infrastructure (VPC, EKS, Redshift, S3, ECR, IAM)
@@ -168,9 +173,11 @@ docker-compose up --build
 | Service     | URL                          | What to check                     |
 |-------------|------------------------------|-----------------------------------|
 | API health  | http://localhost:8000/health  | `{"status": "ok"}`               |
-| Call funnel | http://localhost:8000/api/call-funnel | Daily funnel data         |
+| Call funnel | http://localhost:8000/api/call-funnel | Daily funnel data with job counts |
 | Revenue     | http://localhost:8000/api/revenue     | Daily revenue data        |
+| Jobs        | http://localhost:8000/api/jobs/summary | Completion rate, value    |
 | Dashboard   | http://localhost:5173         | Interactive charts and KPIs      |
+| Metabase    | http://localhost:3001         | Self-serve BI (run `bash metabase/setup.sh` first) |
 
 ### Run Tests Locally
 
@@ -261,12 +268,12 @@ docker compose up --build   # or: make local
 
 ## Data Pipeline
 
-1. **Extract** — Python extractors generate realistic sample data for Aria call records and Stripe payments
-2. **Land** — Raw JSON written to data lake (local filesystem, swappable to S3)
+1. **Extract** — Python extractors pull data from three sources: Aria call records, Stripe payments, and MongoDB service jobs
+2. **Land** — Raw JSON written to data lake (local filesystem, swappable to S3). Lake writes are idempotent (prior extracts cleared before new writes)
 3. **Load** — Raw data loaded into `raw` schema in the warehouse
-4. **Transform** — dbt staging models clean and type the data; mart models aggregate into business metrics
-5. **Trust Gate** — dbt tests validate uniqueness, not-null, accepted values; source freshness checks ensure data is current
-6. **Serve** — FastAPI reads from marts; React dashboard visualizes the funnel and revenue
+4. **Transform** — dbt staging models clean and type the data; mart models aggregate into business metrics (call funnel, revenue, job completion)
+5. **Trust Gate** — dbt tests validate uniqueness, not-null, accepted values; source freshness checks ensure data is current across all three sources
+6. **Serve** — FastAPI reads from marts; React dashboard and Metabase visualize the data
 
 ## Data Trust Gate
 
@@ -299,13 +306,15 @@ The pipeline uses `dbt build`, which runs tests inline — a failing test stops 
 - [x] dbt multi-target profiles (dev=Postgres, prod=Redshift)
 - [x] Security groups scoped: EKS nodes <-> Redshift only
 
-### Phase 3 — Observability
+### Phase 3 — Observability and BI
+- [x] MongoDB as a third data source (service jobs)
+- [x] Metabase for self-serve BI (auto-provisioned warehouse connection)
+- [x] Idempotent lake writes and deterministic seed data
 - [ ] OpenTelemetry instrumentation across Python services
 - [ ] Prometheus metrics collection
 - [ ] Grafana dashboards for pipeline health
 - [ ] Loki for centralized logging
 - [ ] Alerting (PagerDuty / Slack integration)
-- [ ] Metabase for self-serve BI
 
 ### Phase 4 — AI Copilot
 - [ ] MCP server exposing warehouse schema and safe query tool
@@ -318,12 +327,14 @@ The pipeline uses `dbt build`, which runs tests inline — a failing test stops 
 
 | Layer         | Technology                              |
 |---------------|-----------------------------------------|
-| Ingestion     | Python, custom extractors               |
+| Ingestion     | Python, custom extractors, pymongo      |
 | Data Lake     | Local FS / AWS S3                       |
 | Warehouse     | PostgreSQL (dev) / Redshift (prod)      |
 | Transform     | dbt (staging + marts + tests)           |
 | API           | FastAPI, psycopg2                       |
 | Dashboard     | React, Recharts, Vite                   |
+| Self-serve BI | Metabase                                |
+| Document DB   | MongoDB 7                               |
 | Infra (local) | Docker, Docker Compose                  |
 | Infra (cloud) | Terraform, AWS EKS, Helm, Kubernetes    |
 | Cloud storage | AWS S3 (data lake), Redshift Serverless |
