@@ -35,6 +35,19 @@ class WarehouseConfig:
 
 
 @dataclass
+class MongoConfig:
+    uri: str
+    database: str
+
+    @classmethod
+    def from_env(cls) -> "MongoConfig":
+        return cls(
+            uri=os.getenv("MONGO_URI", "mongodb://mongo:27017"),
+            database=os.getenv("MONGO_DB", "reckon"),
+        )
+
+
+@dataclass
 class LakeConfig:
     type: str  # "local" or "s3"
     path: str | None = None

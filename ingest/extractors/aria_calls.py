@@ -27,35 +27,39 @@ TOPICS = [
 ]
 
 
-def generate_call_records(n: int = 200, days_back: int = 30) -> list[dict]:
+SEED = 42  # fixed seed for deterministic call_ids across runs
+
+
+def generate_call_records(n: int = 200, days_back: int = 30, seed: int = SEED) -> list[dict]:
     """Generate n realistic Aria call records spread over days_back days."""
+    rng = random.Random(seed)
     now = datetime.now(tz=None)  # naive UTC for sample data
     records = []
     for _ in range(n):
         ts = now - timedelta(
-            days=random.randint(0, days_back),
-            hours=random.randint(8, 18),
-            minutes=random.randint(0, 59),
+            days=rng.randint(0, days_back),
+            hours=rng.randint(8, 18),
+            minutes=rng.randint(0, 59),
         )
-        urgency = random.choices(
+        urgency = rng.choices(
             list(URGENCY_WEIGHTS.keys()), list(URGENCY_WEIGHTS.values())
         )[0]
-        outcome = random.choices(
+        outcome = rng.choices(
             list(OUTCOME_WEIGHTS.keys()), list(OUTCOME_WEIGHTS.values())
         )[0]
-        duration = max(15, int(random.gauss(180, 90)))
+        duration = max(15, int(rng.gauss(180, 90)))
 
         records.append({
-            "call_id": str(uuid.uuid4()),
+            "call_id": str(uuid.UUID(int=rng.getrandbits(128))),
             "timestamp": ts.isoformat(),
-            "caller_name": random.choice(CALLERS),
-            "caller_phone": f"+1{random.randint(2000000000, 9999999999)}",
+            "caller_name": rng.choice(CALLERS),
+            "caller_phone": f"+1{rng.randint(2000000000, 9999999999)}",
             "urgency": urgency,
-            "topic": random.choice(TOPICS),
+            "topic": rng.choice(TOPICS),
             "outcome": outcome,
             "duration_seconds": duration,
-            "sentiment_score": round(random.uniform(0.3, 1.0), 2),
-            "agent_id": f"aria-{random.randint(1, 3)}",
+            "sentiment_score": round(rng.uniform(0.3, 1.0), 2),
+            "agent_id": f"aria-{rng.randint(1, 3)}",
         })
     return sorted(records, key=lambda r: r["timestamp"])
 

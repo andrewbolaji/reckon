@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -14,7 +15,10 @@ def _s3_client(config: LakeConfig):
 
 
 def write_raw(config: LakeConfig, source: str, records: list[dict]) -> str:
-    """Write a batch of raw JSON records to the lake, partitioned by date."""
+    """Write a batch of raw JSON records to the lake, partitioned by date.
+
+    Clears prior extracts for this source so re-runs are idempotent.
+    """
     ts = datetime.now(tz=None)
     partition = ts.strftime("%Y/%m/%d")
     filename = f"{source}_{ts.strftime('%H%M%S')}.json"
@@ -28,8 +32,12 @@ def write_raw(config: LakeConfig, source: str, records: list[dict]) -> str:
         )
         return f"s3://{config.bucket}/{key}"
 
-    # Local filesystem
-    dest = Path(config.path) / "raw" / source / partition
+    # Local filesystem — clear prior extracts for idempotent loads
+    source_root = Path(config.path) / "raw" / source
+    if source_root.exists():
+        shutil.rmtree(source_root)
+
+    dest = source_root / partition
     dest.mkdir(parents=True, exist_ok=True)
     out = dest / filename
     out.write_text(payload)
