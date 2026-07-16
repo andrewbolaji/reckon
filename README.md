@@ -358,12 +358,12 @@ Question: Which service makes the most money?
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Answer:
-Panel Upgrade is your top earner at $28,918.09 gross ($22,724.05 net)
-across 17 transactions. Water Heater Replacement has the highest average
-ticket at $1,801.68 per job. Emergency Gas Leak ranks third at $10,600.01.
+Panel Upgrade is your top earner at $22,362.77 gross ($17,315.28 net)
+across 14 transactions. Water Heater Replacement has the highest average
+ticket at $1,572.52 per job. Emergency Gas Leak ranks third at $17,169.02.
 ```
 
-Direct query confirmation: `SELECT service_description, sum(revenue_dollars) FROM marts.mart_revenue GROUP BY 1 ORDER BY 2 DESC LIMIT 1` -> Panel Upgrade, $28,918.09.
+Direct query confirmation: `SELECT service_description, sum(revenue_dollars) FROM marts.mart_revenue GROUP BY 1 ORDER BY 2 DESC LIMIT 1` -> Panel Upgrade, $22,362.77.
 
 ---
 
@@ -392,12 +392,12 @@ Question: How much revenue in the last 30 days?
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Answer:
-For June 16 - July 16, 2026: gross revenue $92,296.73, net revenue
-$68,780.39 across 121 transactions (avg ticket $736.41). Refunds totalled
-$23,516.34 across 30 events.
+For June 16 - July 16, 2026: gross revenue $82,597.61, net revenue
+$65,927.28 across 112 transactions (avg ticket $689.84). Refunds totalled
+$16,670.33 across 27 events.
 ```
 
-Direct query confirmation: `SELECT sum(revenue_dollars), sum(net_revenue_dollars), sum(transaction_count) FROM marts.mart_revenue WHERE payment_date >= '2026-06-16'` -> $92,296.73 gross / $68,780.39 net / 121 txns.
+Direct query confirmation: `SELECT sum(revenue_dollars), sum(net_revenue_dollars), sum(transaction_count) FROM marts.mart_revenue WHERE payment_date >= '2026-06-16'` -> $82,597.61 gross / $65,927.28 net / 112 txns.
 
 ### Stale Data Refusal
 
@@ -424,8 +424,8 @@ Cannot answer: data is stale. aria_calls: stale (50h old, threshold is
 48h). Please run the pipeline before querying.
 ```
 
-After restoring `_loaded_at` to `now()` the same question returns $23,501.67 gross /
-$19,634.33 net / 38 transactions (confirmed: direct query matches exactly).
+After restoring `_loaded_at` to `now()` the same question returns $28,162.73 gross /
+$19,325.53 net / 34 transactions (confirmed: direct query matches exactly).
 
 ### Out-of-Scope Refusal
 
