@@ -117,3 +117,75 @@ The copilot lets you ask questions about your business data in plain English. It
 ### Using with Claude Desktop
 
 You can also wire the copilot into Claude Desktop as an MCP server. See the README for the config JSON to add to your `claude_desktop_config.json`.
+
+## Observability
+
+### Enabling it
+
+One command:
+
+```bash
+make observability
+```
+
+This sets `OTEL_ENABLED=true` and starts the observability profile (Prometheus, Pushgateway, Grafana, Loki, Promtail) alongside the core stack.
+
+To stop everything: `make observability-down`.
+
+### What you get
+
+| Service    | URL                    | What it does                                       |
+|------------|------------------------|----------------------------------------------------|
+| Grafana    | http://localhost:3002   | Two auto-provisioned dashboards (Pipeline Health, API Health) |
+| Prometheus | http://localhost:9090   | Metrics store, scrapes API and Pushgateway          |
+| Loki       | (via Grafana Explore)  | Centralized logs from all containers                |
+
+### Grafana dashboards
+
+**Pipeline Health** shows:
+- When the pipeline last ran successfully
+- How long the run took
+- How many dbt tests passed and failed
+- Rows loaded per source (aria_calls, stripe_payments, jobs)
+
+**API Health** shows:
+- Request rate (requests/sec)
+- Latency percentiles (p50, p95, p99)
+- 5xx error rate
+- Requests per endpoint
+
+### Viewing logs in Grafana
+
+1. Open Grafana at http://localhost:3002
+2. Click the compass icon (Explore) in the left sidebar
+3. Select "Loki" as the data source
+4. Query by service: `{service="api"}`, `{service="pipeline"}`, etc.
+
+### Alert rules
+
+Two alerts fire automatically:
+
+1. **PipelineFreshnessBreach**: the pipeline has not run in over 48 hours. This matches the copilot's trust gate -- both use the same 48-hour threshold.
+2. **PipelineDbtTestFailure**: any dbt test failed or errored in the last run. Fires immediately (no wait period).
+
+View alert status at http://localhost:9090/alerts.
+
+### Forwarding logs to Splunk
+
+Promtail can forward logs to a Splunk HTTP Event Collector (HEC) endpoint. To enable:
+
+1. Set two environment variables in your `.env`:
+   ```
+   SPLUNK_HEC_URL=https://your-splunk:8088/services/collector
+   SPLUNK_HEC_TOKEN=your-hec-token
+   ```
+
+2. Edit `observability/promtail/promtail-config.yml` and uncomment the Splunk client block under `clients:`.
+
+3. Restart: `make observability-down && make observability`.
+
+Logs will then be sent to both Loki and Splunk simultaneously.
+
+### Turning it off
+
+Observability is entirely opt-in. Plain `docker compose up` runs the same 6 services as before with zero observability overhead. The `OTEL_ENABLED` env var defaults to `false`, so no OTel packages are loaded and no metrics ports are opened.

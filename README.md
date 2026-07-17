@@ -190,6 +190,7 @@ docker-compose up --build
 | Jobs        | http://localhost:8000/api/jobs/summary | Completion rate, value    |
 | Dashboard   | http://localhost:5173         | Interactive charts and KPIs      |
 | Metabase    | http://localhost:3001         | Self-serve BI (run `bash metabase/setup.sh` first) |
+| Grafana     | http://localhost:3002         | Pipeline and API dashboards (`make observability` only) |
 
 ### Run Tests Locally
 
@@ -543,6 +544,47 @@ Every model has dbt tests that enforce:
 
 The pipeline uses `dbt build`, which runs tests inline — a failing test stops downstream models from materializing.
 
+## Observability
+
+All observability services run behind a Docker Compose profile. The core stack (`docker compose up`) is unchanged. To enable observability:
+
+```bash
+make observability    # sets OTEL_ENABLED=true and starts the observability profile
+```
+
+This starts Prometheus, Pushgateway, Grafana, Loki, and Promtail alongside the existing services.
+
+| Service     | URL                          | What it shows                          |
+|-------------|------------------------------|----------------------------------------|
+| Grafana     | http://localhost:3002         | Pipeline Health and API Health dashboards |
+| Prometheus  | http://localhost:9090         | Metrics and alert rules                |
+| Loki (via Grafana) | Explore tab in Grafana | Centralized container logs             |
+
+### Grafana Dashboards
+
+<p align="center">
+  <img src="docs/img/grafana-pipeline-health.png" alt="Grafana -- Pipeline Health dashboard" width="720" />
+</p>
+
+**Pipeline Health**: last successful run, pipeline duration, dbt test pass/fail counts, rows loaded by source.
+
+<p align="center">
+  <img src="docs/img/grafana-api-health.png" alt="Grafana -- API Health dashboard" width="720" />
+</p>
+
+**API Health**: request rate, latency percentiles (p50/p95/p99), 5xx error rate, requests by endpoint.
+
+### Alert Rules
+
+Two Prometheus alert rules in `observability/prometheus/alerts.yml`:
+
+1. **PipelineFreshnessBreach** -- fires when the pipeline has not run successfully in over 48 hours (matches the copilot's trust gate threshold).
+2. **PipelineDbtTestFailure** -- fires immediately when any dbt test fails or errors.
+
+### Splunk Forwarding
+
+To forward logs to Splunk via HEC, set `SPLUNK_HEC_URL` and `SPLUNK_HEC_TOKEN` in your `.env` and uncomment the Splunk client block in `observability/promtail/promtail-config.yml`. See the HANDBOOK for details.
+
 ## Roadmap
 
 ### Phase 1 — Foundation
@@ -568,11 +610,11 @@ The pipeline uses `dbt build`, which runs tests inline — a failing test stops 
 - [x] MongoDB as a third data source (service jobs)
 - [x] Metabase for self-serve BI (auto-provisioned warehouse connection)
 - [x] Idempotent lake writes and deterministic seed data
-- [ ] OpenTelemetry instrumentation across Python services
-- [ ] Prometheus metrics collection
-- [ ] Grafana dashboards for pipeline health
-- [ ] Loki for centralized logging
-- [ ] Alerting (PagerDuty / Slack integration)
+- [x] OpenTelemetry instrumentation (API RED metrics, pipeline counters), config-gated via `OTEL_ENABLED`
+- [x] Prometheus scraping API and Pushgateway; alert rules for freshness breach and dbt test failure
+- [x] Grafana dashboards auto-provisioned: Pipeline Health and API Health
+- [x] Loki for centralized logs via Promtail, with Splunk HEC forwarding documented
+- [x] All observability behind `profiles: [observability]` -- `make observability` to enable, zero impact on core stack
 
 ### Phase 4 — AI Copilot (current)
 - [x] MCP server (6 tools: revenue, call funnel, jobs, freshness, schema, guarded SQL)
@@ -602,6 +644,7 @@ The pipeline uses `dbt build`, which runs tests inline — a failing test stops 
 | Cloud storage | AWS S3 (data lake), Redshift Serverless |
 | Registry      | AWS ECR                                 |
 | Networking    | VPC, NAT Gateway, Security Groups, IAM  |
+| Observability | OpenTelemetry, Prometheus, Grafana, Loki, Promtail |
 | CI/CD         | GitHub Actions, Makefile                |
 | AI Copilot    | MCP, Claude, Anthropic SDK               |
 
