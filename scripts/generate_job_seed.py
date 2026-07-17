@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 # Import the Aria generator to get deterministic call records
-from ingest.extractors.aria_calls import generate_call_records, TOPICS
+from ingest.extractors.aria_calls import generate_call_records, REFERENCE_DATE, TOPICS
 
 SERVICES = {
     "plumbing repair": (150, 450),
@@ -69,7 +69,7 @@ def generate_jobs() -> list[dict]:
             ).isoformat()
         elif status == "scheduled":
             # future scheduled jobs: push scheduled_at forward
-            scheduled_at = datetime.now() + timedelta(days=rng.randint(1, 14))
+            scheduled_at = REFERENCE_DATE + timedelta(days=rng.randint(1, 14))
 
         jobs.append({
             "job_id": str(uuid.UUID(int=rng.getrandbits(128))),

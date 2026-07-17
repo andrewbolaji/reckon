@@ -3,9 +3,12 @@
 import json
 import os
 import sys
-from datetime import date
 
 import anthropic
+
+# Use REFERENCE_DATE for the copilot's "today" so date-windowed queries
+# align with the frozen demo data. Falls back to real date if unset.
+REFERENCE_DATE = os.getenv("REFERENCE_DATE", "2026-07-16")
 
 from copilot.db import get_conn
 from copilot.tools import (
@@ -20,7 +23,7 @@ from copilot.tools import (
 MODEL = "claude-sonnet-4-6"
 
 def _system_prompt() -> str:
-    today = date.today().isoformat()
+    today = REFERENCE_DATE[:10]  # YYYY-MM-DD portion
     return (
         f"Today's date is {today}. "
         "You are a business intelligence copilot for a home-services company. "

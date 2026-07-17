@@ -49,6 +49,7 @@ services:
       DATA_LAKE_PATH: ${DATA_LAKE_PATH:-/data/lake}
       MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
       MONGO_DB: ${MONGO_DB:-reckon}
+      REFERENCE_DATE: ${REFERENCE_DATE:-2026-07-16T12:00:00}
       OTEL_ENABLED: ${OTEL_ENABLED:-false}
       PUSHGATEWAY_URL: ${PUSHGATEWAY_URL:-http://pushgateway:9091}
     volumes:

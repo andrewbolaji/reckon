@@ -4,12 +4,19 @@ In production this would hit Aria's API; here it generates realistic sample data
 so the pipeline is demonstrable end to end.
 """
 
+import os
 import random
 import uuid
 from datetime import datetime, timedelta
 
 from ingest.config import LakeConfig
 from ingest.lake import write_raw
+
+# Fixed reference date so generated event timestamps are identical on any run date.
+# Override with REFERENCE_DATE env var (YYYY-MM-DD) if needed.
+REFERENCE_DATE = datetime.fromisoformat(
+    os.getenv("REFERENCE_DATE", "2026-07-16T12:00:00")
+)
 
 CALLERS = [
     "Maria Lopez", "James Chen", "Aisha Patel", "David Kim", "Sarah Johnson",
@@ -33,7 +40,7 @@ SEED = 42  # fixed seed for deterministic call_ids across runs
 def generate_call_records(n: int = 200, days_back: int = 30, seed: int = SEED) -> list[dict]:
     """Generate n realistic Aria call records spread over days_back days."""
     rng = random.Random(seed)
-    now = datetime.now(tz=None)  # naive UTC for sample data
+    now = REFERENCE_DATE  # fixed anchor for byte-reproducible timestamps
     records = []
     for _ in range(n):
         ts = now - timedelta(
