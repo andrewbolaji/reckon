@@ -17,6 +17,14 @@ local: ## Start local dev environment with docker-compose
 local-down: ## Stop local dev environment
 	docker compose down -v
 
+.PHONY: observability
+observability: ## Start local stack with full observability (Prometheus, Grafana, Loki)
+	OTEL_ENABLED=true docker compose --profile observability up --build
+
+.PHONY: observability-down
+observability-down: ## Stop observability stack and remove volumes
+	docker compose --profile observability down -v
+
 .PHONY: test
 test: ## Run unit tests
 	python -m pytest ingest/tests/ -v

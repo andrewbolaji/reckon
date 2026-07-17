@@ -49,6 +49,8 @@ services:
       DATA_LAKE_PATH: ${DATA_LAKE_PATH:-/data/lake}
       MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
       MONGO_DB: ${MONGO_DB:-reckon}
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}
+      PUSHGATEWAY_URL: ${PUSHGATEWAY_URL:-http://pushgateway:9091}
     volumes:
       - lake_data:/data/lake
 
@@ -61,12 +63,15 @@ services:
         condition: service_completed_successfully
     ports:
       - "8000:8000"
+      - "${METRICS_PORT:-9464}:${METRICS_PORT:-9464}"
     environment:
       POSTGRES_HOST: ${POSTGRES_HOST:-warehouse}
       POSTGRES_PORT: ${POSTGRES_PORT:-5432}
       POSTGRES_DB: ${POSTGRES_DB:-reckon}
       POSTGRES_USER: ${POSTGRES_USER:-reckon}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reckon_dev}
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}
+      METRICS_PORT: ${METRICS_PORT:-9464}
 
   dashboard:
     build:
@@ -96,8 +101,67 @@ services:
       retries: 30
       start_period: 60s
 
+  # --- Observability (docker compose --profile observability up) ---
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    profiles: [observability]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=72h"
+
+  pushgateway:
+    image: prom/pushgateway:v1.9.0
+    profiles: [observability]
+    ports:
+      - "9091:9091"
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    profiles: [observability]
+    ports:
+      - "${GRAFANA_PORT:-3002}:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+  loki:
+    image: grafana/loki:3.1.0
+    profiles: [observability]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./observability/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:3.1.0
+    profiles: [observability]
+    volumes:
+      - ./observability/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
 volumes:
   pgdata:
   mongodata:
   lake_data:
   metabase_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:

@@ -1,0 +1,24 @@
+groups:
+  - name: reckon-pipeline
+    rules:
+      - alert: PipelineFreshnessBreach
+        expr: (time() - pipeline_last_success_timestamp) > 172800
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pipeline has not run successfully in over 48 hours"
+          description: >
+            The last successful pipeline run was {{ $value | humanizeDuration }} ago.
+            Data freshness is breached. Run the pipeline to restore.
+
+      - alert: PipelineDbtTestFailure
+        expr: pipeline_dbt_test_results{status="fail"} > 0 or pipeline_dbt_test_results{status="error"} > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "dbt tests failed in the last pipeline run"
+          description: >
+            {{ $value }} dbt test(s) with status {{ $labels.status }}.
+            Check the pipeline logs for details.
