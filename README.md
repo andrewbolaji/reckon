@@ -329,7 +329,7 @@ Question: What's my booking rate?
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Answer:
 Your overall booking rate is 41.5%. Out of 200 total calls, 83 resulted
-in a booking. Average caller sentiment is 0.67 / 1.0.
+in a booking. Average caller sentiment is 0.66 / 1.0.
 ```
 
 Direct query confirmation: `SELECT sum(total_calls), sum(booked) FROM marts.mart_call_funnel` -> 200 calls, 83 booked, 41.5%.
@@ -359,12 +359,12 @@ Question: Which service makes the most money?
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Answer:
-Panel Upgrade is your top earner at $22,362.77 gross ($17,315.28 net)
-across 14 transactions. Water Heater Replacement has the highest average
-ticket at $1,572.52 per job. Emergency Gas Leak ranks third at $17,169.02.
+Water Heater Replacement is your top earner at $19,534.94 gross ($17,800.91 net)
+across 12 transactions. Panel Upgrade has the highest average
+ticket at $1,505.77 per job. Emergency Gas Leak ranks second at $19,360.64.
 ```
 
-Direct query confirmation: `SELECT service_description, sum(revenue_dollars) FROM marts.mart_revenue GROUP BY 1 ORDER BY 2 DESC LIMIT 1` -> Panel Upgrade, $22,362.77.
+Direct query confirmation: `SELECT service_description, sum(revenue_dollars) FROM marts.mart_revenue GROUP BY 1 ORDER BY 2 DESC LIMIT 1` -> Water Heater Replacement, $19,534.94.
 
 ---
 
@@ -393,12 +393,12 @@ Question: How much revenue in the last 30 days?
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Answer:
-For June 16 - July 16, 2026: gross revenue $82,597.61, net revenue
-$65,927.28 across 112 transactions (avg ticket $689.84). Refunds totalled
-$16,670.33 across 27 events.
+For June 16 - July 16, 2026: gross revenue $77,389.44, net revenue
+$61,198.05 across 121 transactions (avg ticket $664.76). Refunds totalled
+$16,191.39 across 30 events.
 ```
 
-Direct query confirmation: `SELECT sum(revenue_dollars), sum(net_revenue_dollars), sum(transaction_count) FROM marts.mart_revenue WHERE payment_date >= '2026-06-16'` -> $82,597.61 gross / $65,927.28 net / 112 txns.
+Direct query confirmation: `SELECT sum(revenue_dollars), sum(net_revenue_dollars), sum(transaction_count) FROM marts.mart_revenue WHERE payment_date >= '2026-06-16'` -> $77,389.44 gross / $61,198.05 net / 121 txns.
 
 ### Stale Data Refusal
 
@@ -425,8 +425,8 @@ Cannot answer: data is stale. aria_calls: stale (50h old, threshold is
 48h). Please run the pipeline before querying.
 ```
 
-After restoring `_loaded_at` to `now()` the same question returns $28,162.73 gross /
-$19,325.53 net / 34 transactions (confirmed: direct query matches exactly).
+After restoring `_loaded_at` to `now()` the same question returns $15,772.50 gross /
+$11,891.78 net / 26 transactions (confirmed: direct query matches exactly).
 
 ### Out-of-Scope Refusal
 
