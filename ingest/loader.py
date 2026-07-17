@@ -25,7 +25,7 @@ def load_to_warehouse(
     records = _load_local_files(lake, source)
     if not records:
         print(f"  No records for {source}, skipping.")
-        return
+        return 0
 
     conn = psycopg2.connect(wh.connection_string)
     conn.autocommit = True
@@ -46,3 +46,4 @@ def load_to_warehouse(
     print(f"  Loaded {len(rows)} rows into raw.{table}")
     cur.close()
     conn.close()
+    return len(rows)

@@ -1,5 +1,7 @@
 """Main pipeline entrypoint -- runs extraction and loading."""
 
+import time
+
 from ingest.config import LakeConfig, MongoConfig, WarehouseConfig
 from ingest.extractors import aria_calls, stripe_payments, mongo_jobs
 from ingest.loader import load_to_warehouse
@@ -23,7 +25,11 @@ JOB_COLUMNS = [
 
 
 def run():
-    """Execute the full ingestion pipeline."""
+    """Execute the full ingestion pipeline.
+
+    Returns a dict of row counts by source for telemetry.
+    """
+    start = time.time()
     lake = LakeConfig.from_env()
     wh = WarehouseConfig.from_env()
     mongo = MongoConfig.from_env()
@@ -39,16 +45,19 @@ def run():
     print("[3/6] Extracting MongoDB job records...")
     mongo_jobs.extract(lake, mongo)
 
+    rows = {}
     print("\n[4/6] Loading call records into warehouse...")
-    load_to_warehouse(lake, wh, "aria_calls", "aria_calls", CALL_COLUMNS)
+    rows["aria_calls"] = load_to_warehouse(lake, wh, "aria_calls", "aria_calls", CALL_COLUMNS)
 
     print("[5/6] Loading payment records into warehouse...")
-    load_to_warehouse(lake, wh, "stripe_payments", "stripe_payments", PAYMENT_COLUMNS)
+    rows["stripe_payments"] = load_to_warehouse(lake, wh, "stripe_payments", "stripe_payments", PAYMENT_COLUMNS)
 
     print("[6/6] Loading job records into warehouse...")
-    load_to_warehouse(lake, wh, "mongo_jobs", "jobs", JOB_COLUMNS)
+    rows["jobs"] = load_to_warehouse(lake, wh, "mongo_jobs", "jobs", JOB_COLUMNS)
 
-    print("\n=== Ingestion complete ===")
+    duration = time.time() - start
+    print(f"\n=== Ingestion complete ({duration:.1f}s) ===")
+    return {"rows": rows, "duration_seconds": duration}
 
 
 if __name__ == "__main__":

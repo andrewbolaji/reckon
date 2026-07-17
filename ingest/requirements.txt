@@ -1,3 +1,5 @@
 psycopg2-binary==2.9.9
 boto3==1.35.0
 pymongo==4.7.3
+# Prometheus client for pushing pipeline metrics (loaded only when OTEL_ENABLED=true)
+prometheus-client==0.20.0

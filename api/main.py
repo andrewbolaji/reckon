@@ -8,6 +8,8 @@ import psycopg2.extras
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from telemetry import init_telemetry
+
 
 def get_conn():
     return psycopg2.connect(
@@ -25,6 +27,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Reckon API", version="1.0.0", lifespan=lifespan)
+init_telemetry(app)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
