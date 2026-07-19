@@ -1,6 +1,6 @@
 # Reckon
 
-**A business-intelligence platform with an AI copilot** — by [AIntellect](https://github.com/AIntellect).
+**A business-intelligence platform with an AI copilot.**
 
 Reckon ingests a business's scattered operational data, pipelines it into a warehouse, surfaces dashboards, and lets a non-technical owner ask questions in plain English. Data flows in from three sources: **Aria** (AI voice agent call records), **Stripe** (payment transactions), and **MongoDB** (service job records). Metabase provides self-serve BI alongside the custom React dashboard.
 
@@ -9,10 +9,10 @@ Reckon ingests a business's scattered operational data, pipelines it into a ware
 ## Dashboard
 
 <p align="center">
-  <img src="docs/img/dashboard-light.png" alt="Reckon dashboard — light mode" width="720" />
+  <img src="docs/img/dashboard-light.png" alt="Reckon dashboard, light mode" width="720" />
 </p>
 <p align="center">
-  <img src="docs/img/dashboard-dark.png" alt="Reckon dashboard — dark mode" width="720" />
+  <img src="docs/img/dashboard-dark.png" alt="Reckon dashboard, dark mode" width="720" />
 </p>
 
 ---
@@ -27,13 +27,13 @@ graph TB
         O[MongoDB<br/>Service Jobs]
     end
 
-    subgraph "Ingestion Layer"
+    subgraph IL["Ingestion Layer"]
         C[Python Extractors]
         D[Data Lake<br/>Local FS / S3]
         E[Raw Loader]
     end
 
-    subgraph "Transform Layer"
+    subgraph TL["Transform Layer"]
         F[dbt Staging Models]
         G[dbt Mart Models]
         H[Data Trust Gate<br/>dbt tests + freshness]
@@ -43,13 +43,13 @@ graph TB
         I[(PostgreSQL / Redshift)]
     end
 
-    subgraph "Serving Layer"
+    subgraph SL["Serving Layer"]
         J[FastAPI]
         K[React Dashboard]
         L[Metabase]
     end
 
-    subgraph "AI Copilot — Phase 4"
+    subgraph CP["AI Copilot (Phase 4)"]
         M[MCP Server]
         N[Claude / Agent]
     end
@@ -79,19 +79,19 @@ graph TB
 
 ```mermaid
 graph TB
-    subgraph "AWS Cloud"
-        subgraph "EKS Cluster (2 nodes)"
+    subgraph AWS["AWS Cloud"]
+        subgraph EKSC["EKS Cluster (2 nodes)"]
             API[API Deployment<br/>2 replicas]
             DASH[Dashboard Deployment<br/>2 replicas]
             PIPE[Pipeline CronJob<br/>every 6h]
         end
 
-        subgraph "Data Stores"
+        subgraph DS["Data Stores"]
             S3[S3 Data Lake<br/>versioned + encrypted]
             RS[Redshift Serverless<br/>8 RPU base]
         end
 
-        subgraph "Container Registry"
+        subgraph CR["Container Registry"]
             ECR[ECR<br/>3 repositories]
         end
 
@@ -105,21 +105,21 @@ graph TB
         ECR -.-> PIPE
     end
 
-    subgraph "IaC"
+    subgraph IAC["IaC"]
         TF[Terraform]
         HELM[Helm Chart]
     end
 
     TF --> S3
     TF --> RS
-    TF --> EKS Cluster
+    TF --> EKSC
     TF --> ECR
     HELM --> API
     HELM --> DASH
     HELM --> PIPE
 
-    style TF fill:#7c3aed,stroke:#5b21b6,color:#fff
-    style HELM fill:#0ea5e9,stroke:#0284c7,color:#fff
+    style TF fill:#1d4ed8,stroke:#1e3a8a,color:#fff
+    style HELM fill:#f59e0b,stroke:#92400e,color:#000
 ```
 
 ## Project Structure
@@ -167,7 +167,7 @@ Reckon/
 
 ```bash
 # 1. Clone and configure
-git clone <repo-url> && cd Reckon
+git clone https://github.com/andrewbolaji/reckon.git && cd reckon
 cp .env.example .env
 
 # 2. Start everything
@@ -298,7 +298,7 @@ python -m copilot.cli
 
 ### Example Sessions
 
-The transcripts below are real -- captured by running `python -m copilot.cli` against
+The transcripts below are real, captured by running `python -m copilot.cli` against
 the live warehouse. Every number is verified against a direct SQL query.
 
 **What's my booking rate?**
@@ -441,7 +441,7 @@ Question: Who is my biggest customer by name?
 Answer:
 Customer-level data is not available through any of my tools. The mart
 tables (mart_revenue, mart_call_funnel, mart_jobs) aggregate by service
-category, payment method, and date -- they do not contain customer names
+category, payment method, and date. They do not contain customer names
 or IDs. To find your biggest customer by name, query your CRM or Stripe
 customer records directly.
 ```
@@ -480,16 +480,16 @@ Safety lives in the tools and the database role, not in the prompt:
 3. **Read-only session**: the connection is set to `READ ONLY` mode, so writes fail even if the role somehow allowed them.
 4. **Row cap and timeout**: maximum 100 rows per query, 5-second timeout.
 5. **Error sanitization**: database errors return a generic message to the user; raw error details (table names, column names, query text) go only to the server-side audit log.
-6. **Parameterized queries**: all tool-generated SQL uses `%s` placeholders -- user-supplied filter values never touch the query string.
+6. **Parameterized queries**: all tool-generated SQL uses `%s` placeholders. User-supplied filter values never touch the query string.
 7. **Audit log**: every tool call, query, and refusal is logged as structured JSON to stderr.
 
 ### Threat Model
 
 #### Assets
 
-- **Warehouse marts** -- aggregated business metrics (revenue, calls, jobs). No PII in marts; raw schema contains customer emails but is inaccessible to the copilot role.
-- **Database credentials** -- the `reckon_reader` role password and the admin connection credentials.
-- **The `reckon_reader` role itself** -- its privilege boundary is the primary security control.
+- **Warehouse marts**: aggregated business metrics (revenue, calls, jobs). No PII in marts; raw schema contains customer emails but is inaccessible to the copilot role.
+- **Database credentials**: the `reckon_reader` role password and the admin connection credentials.
+- **The `reckon_reader` role itself**: its privilege boundary is the primary security control.
 
 #### Threats and mitigations
 
@@ -527,12 +527,12 @@ pytest copilot/tests/test_trust_gate.py::TestSqlValidation \
 
 ## Data Pipeline
 
-1. **Extract** — Python extractors pull data from three sources: Aria call records, Stripe payments, and MongoDB service jobs
-2. **Land** — Raw JSON written to data lake (local filesystem, swappable to S3). Lake writes are idempotent (prior extracts cleared before new writes)
-3. **Load** — Raw data loaded into `raw` schema in the warehouse
-4. **Transform** — dbt staging models clean and type the data; mart models aggregate into business metrics (call funnel, revenue, job completion)
-5. **Trust Gate** — dbt tests validate uniqueness, not-null, accepted values; source freshness checks ensure data is current across all three sources
-6. **Serve** — FastAPI reads from marts; React dashboard and Metabase visualize the data
+1. **Extract.** Python extractors pull data from three sources: Aria call records, Stripe payments, and MongoDB service jobs.
+2. **Land.** Raw JSON written to data lake (local filesystem, swappable to S3). Lake writes are idempotent (prior extracts cleared before new writes).
+3. **Load.** Raw data loaded into `raw` schema in the warehouse.
+4. **Transform.** dbt staging models clean and type the data; mart models aggregate into business metrics (call funnel, revenue, job completion).
+5. **Trust Gate.** dbt tests validate uniqueness, not-null, accepted values; source freshness checks ensure data is current across all three sources.
+6. **Serve.** FastAPI reads from marts; React dashboard and Metabase visualize the data.
 
 ## Data Trust Gate
 
@@ -542,7 +542,7 @@ Every model has dbt tests that enforce:
 - **Accepted values**: `urgency`, `outcome`, and `status` are constrained to known values
 - **Source freshness**: data older than 24h triggers a warning; older than 48h fails the pipeline
 
-The pipeline uses `dbt build`, which runs tests inline — a failing test stops downstream models from materializing.
+The pipeline uses `dbt build`, which runs tests inline. A failing test stops downstream models from materializing.
 
 ## Observability
 
@@ -563,13 +563,13 @@ This starts Prometheus, Pushgateway, Grafana, Loki, and Promtail alongside the e
 ### Grafana Dashboards
 
 <p align="center">
-  <img src="docs/img/grafana-pipeline-health.png" alt="Grafana -- Pipeline Health dashboard" width="720" />
+  <img src="docs/img/grafana-pipeline-health.png" alt="Grafana Pipeline Health dashboard" width="720" />
 </p>
 
 **Pipeline Health**: last successful run, pipeline duration, dbt test pass/fail counts, rows loaded by source.
 
 <p align="center">
-  <img src="docs/img/grafana-api-health.png" alt="Grafana -- API Health dashboard" width="720" />
+  <img src="docs/img/grafana-api-health.png" alt="Grafana API Health dashboard" width="720" />
 </p>
 
 **API Health**: request rate, latency percentiles (p50/p95/p99), 5xx error rate, requests by endpoint.
@@ -578,8 +578,8 @@ This starts Prometheus, Pushgateway, Grafana, Loki, and Promtail alongside the e
 
 Two Prometheus alert rules in `observability/prometheus/alerts.yml`:
 
-1. **PipelineFreshnessBreach** -- fires when the pipeline has not run successfully in over 48 hours (matches the copilot's trust gate threshold).
-2. **PipelineDbtTestFailure** -- fires immediately when any dbt test fails or errors.
+1. **PipelineFreshnessBreach**: fires when the pipeline has not run successfully in over 48 hours (matches the copilot's trust gate threshold).
+2. **PipelineDbtTestFailure**: fires immediately when any dbt test fails or errors.
 
 ### Splunk Forwarding
 
@@ -587,7 +587,7 @@ To forward logs to Splunk via HEC, set `SPLUNK_HEC_URL` and `SPLUNK_HEC_TOKEN` i
 
 ## Roadmap
 
-### Phase 1 — Foundation
+### Phase 1: Foundation
 - [x] Monorepo scaffold
 - [x] Two Python extractors with sample data
 - [x] Data-lake abstraction (local / S3)
@@ -597,7 +597,7 @@ To forward logs to Splunk via HEC, set `SPLUNK_HEC_URL` and `SPLUNK_HEC_TOKEN` i
 - [x] GitHub Actions CI
 - [x] Docker Compose for local dev
 
-### Phase 2 — Cloud and Kubernetes (current)
+### Phase 2: Cloud and Kubernetes
 - [x] Terraform IaC: VPC, EKS cluster, Redshift Serverless, S3 data lake, ECR, IAM
 - [x] Helm chart: API and dashboard Deployments, pipeline CronJob, K8s Secrets
 - [x] ECR build-and-push scripts for all 3 images
@@ -606,7 +606,7 @@ To forward logs to Splunk via HEC, set `SPLUNK_HEC_URL` and `SPLUNK_HEC_TOKEN` i
 - [x] dbt multi-target profiles (dev=Postgres, prod=Redshift)
 - [x] Security groups scoped: EKS nodes <-> Redshift only
 
-### Phase 3 — Observability and BI
+### Phase 3: Observability and BI
 - [x] MongoDB as a third data source (service jobs)
 - [x] Metabase for self-serve BI (auto-provisioned warehouse connection)
 - [x] Idempotent lake writes and deterministic seed data
@@ -614,9 +614,9 @@ To forward logs to Splunk via HEC, set `SPLUNK_HEC_URL` and `SPLUNK_HEC_TOKEN` i
 - [x] Prometheus scraping API and Pushgateway; alert rules for freshness breach and dbt test failure
 - [x] Grafana dashboards auto-provisioned: Pipeline Health and API Health
 - [x] Loki for centralized logs via Promtail, with Splunk HEC forwarding documented
-- [x] All observability behind `profiles: [observability]` -- `make observability` to enable, zero impact on core stack
+- [x] All observability behind `profiles: [observability]`. `make observability` to enable, zero impact on core stack
 
-### Phase 4 — AI Copilot (current)
+### Phase 4: AI Copilot
 - [x] MCP server (6 tools: revenue, call funnel, jobs, freshness, schema, guarded SQL)
 - [x] Read-only SQL guardrails (query validation, row cap, statement timeout, allowlisted tables)
 - [x] Read-only DB role (`reckon_reader`): SELECT on marts only, no raw or staging access
@@ -650,4 +650,3 @@ To forward logs to Splunk via HEC, set `SPLUNK_HEC_URL` and `SPLUNK_HEC_TOKEN` i
 
 ---
 
-*Built by AIntellect*

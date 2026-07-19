@@ -19,7 +19,7 @@ SCHEMA_INFO = {
             "call_date": "Date of calls (date)",
             "total_calls": "Count of all calls that day (int)",
             "qualified": "Calls with outcome 'qualified' (int)",
-            "booked": "Calls with outcome 'booked' -- the key conversion metric (int)",
+            "booked": "Calls with outcome 'booked', the key conversion metric (int)",
             "escalated": "Calls with outcome 'escalated' (int)",
             "missed": "Calls with outcome 'missed' (int)",
             "resolved": "Calls with outcome 'resolved' (int)",

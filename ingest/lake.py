@@ -1,4 +1,4 @@
-"""Data-lake writer — abstracts local filesystem vs S3."""
+"""Data-lake writer. Abstracts local filesystem vs S3."""
 
 import json
 import os
@@ -32,7 +32,7 @@ def write_raw(config: LakeConfig, source: str, records: list[dict]) -> str:
         )
         return f"s3://{config.bucket}/{key}"
 
-    # Local filesystem — clear prior extracts for idempotent loads
+    # Local filesystem: clear prior extracts for idempotent loads
     source_root = Path(config.path) / "raw" / source
     if source_root.exists():
         shutil.rmtree(source_root)

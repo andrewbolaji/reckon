@@ -89,12 +89,12 @@ The copilot lets you ask questions about your business data in plain English. It
 
 ### Questions it can answer
 
-- "How much revenue last week?" -- uses the revenue_summary tool
-- "Which service makes the most money?" -- uses revenue_summary grouped by service
-- "What's my booking rate?" -- uses the call_funnel tool
-- "How are job completions looking?" -- uses the job_completion tool
-- "Is my data fresh?" -- uses the check_freshness tool
-- "What's the average ticket size for plumbing?" -- falls back to the guarded SQL tool
+- "How much revenue last week?" (uses the revenue_summary tool)
+- "Which service makes the most money?" (uses revenue_summary grouped by service)
+- "What's my booking rate?" (uses the call_funnel tool)
+- "How are job completions looking?" (uses the job_completion tool)
+- "Is my data fresh?" (uses the check_freshness tool)
+- "What's the average ticket size for plumbing?" (falls back to the guarded SQL tool)
 
 ### Questions it will refuse
 
@@ -165,7 +165,7 @@ To stop everything: `make observability-down`.
 
 Two alerts fire automatically:
 
-1. **PipelineFreshnessBreach**: the pipeline has not run in over 48 hours. This matches the copilot's trust gate -- both use the same 48-hour threshold.
+1. **PipelineFreshnessBreach**: the pipeline has not run in over 48 hours. This matches the copilot's trust gate (both use the same 48-hour threshold).
 2. **PipelineDbtTestFailure**: any dbt test failed or errored in the last run. Fires immediately (no wait period).
 
 View alert status at http://localhost:9090/alerts.

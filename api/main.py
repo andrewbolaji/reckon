@@ -1,4 +1,4 @@
-"""Reckon API — serves warehouse data to the dashboard."""
+"""Reckon API: serves warehouse data to the dashboard."""
 
 import os
 from contextlib import asynccontextmanager

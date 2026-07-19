@@ -3,7 +3,6 @@
 ## Audience
 
 1. **Non-technical business owners** (home services, trades). They want to see revenue, call outcomes, and trends at a glance. No jargon.
-2. **Hiring managers and investors** evaluating AIntellect. They want the dashboard to look considered and modern.
 
 ## Visual direction
 

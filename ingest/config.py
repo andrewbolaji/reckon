@@ -1,4 +1,4 @@
-"""Config loader — reads from env vars so the same code works locally and on AWS."""
+"""Config loader. Reads from env vars so the same code works locally and on AWS."""
 
 import os
 from dataclasses import dataclass

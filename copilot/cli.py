@@ -1,4 +1,4 @@
-"""CLI REPL for the Reckon copilot -- demo surface."""
+"""CLI REPL for the Reckon copilot (demo surface)."""
 
 import json
 import os
@@ -30,7 +30,7 @@ def _system_prompt() -> str:
         "You answer questions using ONLY the data returned by your tools. "
         "Every number in your answer must come from a tool result. "
         "If a tool returns a 'data_stale' error, relay the refusal message "
-        "to the user exactly -- do not guess or estimate. "
+        "to the user exactly. Do not guess or estimate. "
         "If a tool returns a 'caveat' field, include that caveat in your answer. "
         "If the data cannot answer the question, say so honestly. "
         "Do not invent, estimate, or hallucinate any numbers."

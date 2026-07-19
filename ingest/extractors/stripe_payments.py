@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from ingest.config import LakeConfig
 from ingest.lake import write_raw
 
-# Fixed reference date -- same anchor as aria_calls for consistent demo data.
+# Fixed reference date (same anchor as aria_calls for consistent demo data).
 REFERENCE_DATE = datetime.fromisoformat(
     os.getenv("REFERENCE_DATE", "2026-07-16T12:00:00")
 )

@@ -1,4 +1,4 @@
-"""Main pipeline entrypoint -- runs extraction and loading."""
+"""Main pipeline entrypoint. Runs extraction and loading."""
 
 import time
 
