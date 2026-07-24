@@ -1,0 +1,43 @@
+{{- if .Values.monitoring.enabled }}
+# Dedicated ClusterIP service for API metrics. Kept separate from the public
+# LoadBalancer so /metrics is never exposed on the internet-facing ELB — only
+# the in-cluster Prometheus reaches it, via the ServiceMonitor below.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "reckon.fullname" . }}-api-metrics
+  labels:
+    {{- include "reckon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+    reckon.io/monitor: api-metrics
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.monitoring.metricsPort }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    app.kubernetes.io/component: api
+    app.kubernetes.io/instance: {{ .Release.Name }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "reckon.fullname" . }}-api
+  labels:
+    {{- include "reckon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      reckon.io/monitor: api-metrics
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+{{- end }}

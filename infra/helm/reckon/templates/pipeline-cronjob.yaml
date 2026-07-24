@@ -29,6 +29,12 @@ spec:
               env:
                 - name: DBT_TARGET
                   value: {{ .Values.pipeline.dbtTarget | quote }}
+                {{- if .Values.monitoring.enabled }}
+                - name: OTEL_ENABLED
+                  value: "true"
+                - name: PUSHGATEWAY_URL
+                  value: "http://{{ include "reckon.fullname" . }}-pushgateway:{{ .Values.monitoring.pushgateway.port }}"
+                {{- end }}
               resources:
                 requests:
                   cpu: 250m
