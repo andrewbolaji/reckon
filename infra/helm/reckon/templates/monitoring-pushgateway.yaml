@@ -1,0 +1,85 @@
+{{- if .Values.monitoring.enabled }}
+# In-cluster Pushgateway. The pipeline runs as a short-lived CronJob, so it
+# cannot be scraped directly — it PUSHES its metrics here on each run, and
+# Prometheus scrapes the Pushgateway (honorLabels keeps the pipeline's own
+# job/instance labels). This mirrors the local docker-compose observability
+# stack, where the pipeline pushes to a Pushgateway on :9091.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "reckon.fullname" . }}-pushgateway
+  labels:
+    {{- include "reckon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pushgateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: pushgateway
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: pushgateway
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: pushgateway
+          image: {{ .Values.monitoring.pushgateway.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.monitoring.pushgateway.port }}
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "reckon.fullname" . }}-pushgateway
+  labels:
+    {{- include "reckon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pushgateway
+    reckon.io/monitor: pushgateway
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.monitoring.pushgateway.port }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    app.kubernetes.io/component: pushgateway
+    app.kubernetes.io/instance: {{ .Release.Name }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "reckon.fullname" . }}-pushgateway
+  labels:
+    {{- include "reckon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pushgateway
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      reckon.io/monitor: pushgateway
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      honorLabels: true
+{{- end }}

@@ -27,6 +27,19 @@ pipeline:
   failedJobsHistoryLimit: 3
   dbtTarget: prod
 
+# ---- Monitoring (in-cluster Prometheus scraping) ----
+# When enabled, the app exposes Prometheus metrics and ships ServiceMonitors so
+# the kube-prometheus-stack Prometheus scrapes them. The API serves OTel metrics
+# on :9464; the pipeline pushes to an in-cluster Pushgateway (below), which
+# Prometheus then scrapes. Requires the ServiceMonitor CRD (installed by
+# `make monitoring`, which runs before `helm-install` in `make up`).
+monitoring:
+  enabled: true
+  metricsPort: 9464
+  pushgateway:
+    image: prom/pushgateway:v1.9.0
+    port: 9091
+
 # ---- API ----
 api:
   replicas: 2

@@ -581,6 +581,34 @@ Two Prometheus alert rules in `observability/prometheus/alerts.yml`:
 1. **PipelineFreshnessBreach**: fires when the pipeline has not run successfully in over 48 hours (matches the copilot's trust gate threshold).
 2. **PipelineDbtTestFailure**: fires immediately when any dbt test fails or errors.
 
+### Cluster Monitoring (EKS)
+
+The same observability, but on the cluster itself. `make monitoring` installs
+[kube-prometheus-stack](https://github.com/prometheus-community/helm-charts) from a
+committed values file (`infra/helm/monitoring/values.yaml`) into the `monitoring`
+namespace — Prometheus, Grafana, Alertmanager, node-exporter, and kube-state-metrics.
+It is folded into `make up`, so a full deploy comes up **with** monitoring, and
+`make down` removes it (releasing its LoadBalancer) before Terraform destroy.
+
+```bash
+# Email alerts need SMTP creds (never committed) — inject at install time:
+export SMTP_USER=you@gmail.com SMTP_PASSWORD=<gmail-app-password> ALERT_EMAIL=you@gmail.com
+make monitoring          # or just `make up` — monitoring is included
+```
+
+Dashboards provision as code (labelled ConfigMaps loaded by the Grafana sidecar) with
+**zero clicks**. Alongside the ported Pipeline Health and API Health dashboards, a new
+**Reckon Health** dashboard shows pipeline freshness, dbt test pass/fail, API latency,
+and pod health for the `reckon` namespace.
+
+<p align="center">
+  <img src="docs/img/grafana-reckon-health.png" alt="Grafana Reckon Health dashboard on EKS" width="720" />
+</p>
+
+Both alert rules (`PipelineFreshnessBreach`, `PipelineDbtTestFailure`) run in the
+cluster Prometheus, and Alertmanager is wired to a real email receiver so the freshness
+breach actually notifies.
+
 ### Splunk Forwarding
 
 To forward logs to Splunk via HEC, set `SPLUNK_HEC_URL` and `SPLUNK_HEC_TOKEN` in your `.env` and uncomment the Splunk client block in `observability/promtail/promtail-config.yml`. See the HANDBOOK for details.
@@ -626,6 +654,14 @@ To forward logs to Splunk via HEC, set `SPLUNK_HEC_URL` and `SPLUNK_HEC_TOKEN` i
 - [x] Claude Desktop integration documented
 - [x] 60 tests: security (injection, privilege escalation, error sanitization), trust gate (freshness, SQL validation), tool correctness
 - [ ] Conversation memory and follow-up queries
+
+### Phase 5: Cluster Monitoring
+- [x] kube-prometheus-stack via Helm on EKS, from a committed values file (`infra/helm/monitoring/values.yaml`) — never click-configured
+- [x] Wired into the Makefile: `make monitoring` (also folded into `make up`); `make down` tears it down before Terraform destroy
+- [x] All three Grafana dashboards provisioned as code (labelled ConfigMaps, sidecar auto-load): Pipeline Health, API Health, and a new **Reckon Health** (pipeline freshness, dbt test pass/fail, API latency, pod health for the `reckon` namespace)
+- [x] App metrics scraped in-cluster: API `/metrics` via a ServiceMonitor; pipeline metrics via an in-cluster Pushgateway + ServiceMonitor
+- [x] Both Prometheus alert rules ported into the cluster stack (`PipelineFreshnessBreach`, `PipelineDbtTestFailure`) as a PrometheusRule
+- [x] Alertmanager with a real email receiver — the freshness breach actually notifies (SMTP creds injected at install, never committed)
 
 ## Tech Stack
 

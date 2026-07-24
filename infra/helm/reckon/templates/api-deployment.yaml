@@ -22,10 +22,22 @@ spec:
           image: {{ .Values.images.api }}
           imagePullPolicy: {{ .Values.images.pullPolicy }}
           ports:
-            - containerPort: {{ .Values.api.port }}
+            - name: http
+              containerPort: {{ .Values.api.port }}
+            {{- if .Values.monitoring.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.monitoring.metricsPort }}
+            {{- end }}
           envFrom:
             - secretRef:
                 name: {{ include "reckon.fullname" . }}-secrets
+          {{- if .Values.monitoring.enabled }}
+          env:
+            - name: OTEL_ENABLED
+              value: "true"
+            - name: METRICS_PORT
+              value: {{ .Values.monitoring.metricsPort | quote }}
+          {{- end }}
           resources:
             {{- toYaml .Values.api.resources | nindent 12 }}
           readinessProbe:
