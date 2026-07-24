@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 venv/
+.venv/
 node_modules/
 dist/
 target/
@@ -22,3 +23,6 @@ data/lake/
 *.tfvars
 !*.tfvars.example
 .terraform.lock.hcl
+
+# dbt per-user id
+.user.yml
