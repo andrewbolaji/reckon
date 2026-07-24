@@ -10,18 +10,18 @@ with jobs as (
 by_category as (
     select
         service_category,
-        count(*)                                          as total_jobs,
-        count(*) filter (where job_status = 'completed')  as completed,
-        count(*) filter (where job_status = 'scheduled')  as scheduled,
-        count(*) filter (where job_status = 'cancelled')  as cancelled,
+        count(*)                                                 as total_jobs,
+        count(case when job_status = 'completed' then 1 end)     as completed,
+        count(case when job_status = 'scheduled' then 1 end)     as scheduled,
+        count(case when job_status = 'cancelled' then 1 end)     as cancelled,
         round(
-            100.0 * count(*) filter (where job_status = 'completed')
+            100.0 * count(case when job_status = 'completed' then 1 end)
             / nullif(count(*), 0), 1
-        )                                                 as completion_rate_pct,
-        round(avg(job_value) filter (where job_status = 'completed'), 2)
-                                                          as avg_completed_value,
-        round(sum(job_value) filter (where job_status = 'completed'), 2)
-                                                          as total_completed_value
+        )                                                        as completion_rate_pct,
+        round(avg(case when job_status = 'completed' then job_value end), 2)
+                                                                 as avg_completed_value,
+        round(sum(case when job_status = 'completed' then job_value end), 2)
+                                                                 as total_completed_value
     from jobs
     group by 1
 )

@@ -16,8 +16,8 @@ daily_revenue as (
         count(*)                                   as transaction_count,
         sum(amount_dollars)                        as revenue_dollars,
         round(avg(amount_dollars), 2)              as avg_ticket_dollars,
-        count(*) filter (where status = 'refunded') as refund_count,
-        coalesce(sum(amount_dollars) filter (where status = 'refunded'), 0) as refund_dollars
+        count(case when status = 'refunded' then 1 end) as refund_count,
+        coalesce(sum(case when status = 'refunded' then amount_dollars end), 0) as refund_dollars
     from payments
     group by 1, 2, 3
 )

@@ -14,9 +14,9 @@ jobs_agg as (
     -- so there is no fanout even if the relationship becomes one-to-many.
     select
         c.call_timestamp::date as call_date,
-        count(j.job_id)                                         as total_jobs,
-        count(j.job_id) filter (where j.job_status = 'completed')  as completed_jobs,
-        count(j.job_id) filter (where j.job_status = 'cancelled')  as cancelled_jobs
+        count(j.job_id)                                                     as total_jobs,
+        count(case when j.job_status = 'completed' then j.job_id end)        as completed_jobs,
+        count(case when j.job_status = 'cancelled' then j.job_id end)        as cancelled_jobs
     from calls c
     left join {{ ref('stg_jobs') }} j
         on c.call_id = j.related_call_id
@@ -26,12 +26,12 @@ jobs_agg as (
 daily as (
     select
         date_trunc('day', call_timestamp)::date as call_date,
-        count(*)                                as total_calls,
-        count(*) filter (where outcome = 'qualified')  as qualified,
-        count(*) filter (where outcome = 'booked')     as booked,
-        count(*) filter (where outcome = 'escalated')  as escalated,
-        count(*) filter (where outcome = 'missed')     as missed,
-        count(*) filter (where outcome = 'resolved')   as resolved,
+        count(*)                                           as total_calls,
+        count(case when outcome = 'qualified' then 1 end)  as qualified,
+        count(case when outcome = 'booked' then 1 end)     as booked,
+        count(case when outcome = 'escalated' then 1 end)  as escalated,
+        count(case when outcome = 'missed' then 1 end)     as missed,
+        count(case when outcome = 'resolved' then 1 end)   as resolved,
         round(avg(duration_seconds), 1)                as avg_duration_seconds,
         round(avg(sentiment_score), 2)                 as avg_sentiment
     from calls
