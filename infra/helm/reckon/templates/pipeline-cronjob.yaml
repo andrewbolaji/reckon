@@ -29,6 +29,12 @@ spec:
               env:
                 - name: DBT_TARGET
                   value: {{ .Values.pipeline.dbtTarget | quote }}
+                {{- if .Values.mongo.enabled }}
+                - name: MONGO_URI
+                  value: "mongodb://{{ include "reckon.fullname" . }}-mongo:{{ .Values.mongo.port }}"
+                - name: MONGO_DB
+                  value: {{ .Values.mongo.db | quote }}
+                {{- end }}
                 {{- if .Values.monitoring.enabled }}
                 - name: OTEL_ENABLED
                   value: "true"

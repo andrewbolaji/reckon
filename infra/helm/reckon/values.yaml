@@ -40,6 +40,23 @@ monitoring:
     image: prom/pushgateway:v1.9.0
     port: 9091
 
+# ---- MongoDB (seeded demo source for the pipeline's job records) ----
+# Optional in-cluster mongo:7, seeded from files/mongo (mirrors the local
+# docker-compose mongo). Ingest step 3 reads job records from it. On by default
+# so `make up` produces a complete pipeline with zero manual deploys; set
+# enabled=false when pointing MONGO_URI at an external MongoDB.
+mongo:
+  enabled: true
+  image: mongo:7
+  port: 27017
+  db: reckon
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
 # ---- API ----
 api:
   replicas: 2

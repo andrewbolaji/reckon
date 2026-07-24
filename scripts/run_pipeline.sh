@@ -42,7 +42,7 @@ conn = psycopg2.connect(
 cur = conn.cursor()
 rows = {}
 for table, key in [('aria_calls', 'aria_calls'), ('stripe_payments', 'stripe_payments'), ('jobs', 'jobs')]:
-    cur.execute(f'SELECT count(*) FROM raw.{table}')
+    cur.execute(f'SELECT count(*) FROM \"raw\".{table}')  # \"raw\" quoted: reserved word on Redshift
     rows[key] = cur.fetchone()[0]
 cur.close()
 conn.close()

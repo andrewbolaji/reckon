@@ -1,0 +1,832 @@
+[
+  {
+    "job_id": "baa1c6f1-404b-6eaf-162a-01dec28753f8",
+    "related_call_id": "b89bdf7f-93e3-4c35-ef0a-573d53d2d56d",
+    "status": "completed",
+    "service_category": "electrical inspection",
+    "value": 140.02,
+    "technician": "Chris Wallace",
+    "scheduled_at": "2026-06-18T00:05:00",
+    "completed_at": "2026-06-18T02:13:00"
+  },
+  {
+    "job_id": "377925b3-96a1-da2c-9cfb-ba43b8e3c71f",
+    "related_call_id": "c56bad4c-4c30-77c4-fb75-6923f910abb3",
+    "status": "completed",
+    "service_category": "thermostat installation",
+    "value": 325.12,
+    "technician": "Ana Gutierrez",
+    "scheduled_at": "2026-06-17T07:43:00",
+    "completed_at": "2026-06-17T10:09:00"
+  },
+  {
+    "job_id": "91215785-d997-7338-2dd3-01c8a91afa5c",
+    "related_call_id": "48212ddb-45b8-9cd9-27cb-6f2a8da01097",
+    "status": "scheduled",
+    "service_category": "drain cleaning",
+    "value": 315.37,
+    "technician": "Ana Gutierrez",
+    "scheduled_at": "2026-07-24T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "01f35efe-8ed5-f036-44f7-58cd0aeb34f9",
+    "related_call_id": "fa740cc8-a43a-fb7a-c40d-487422ab7752",
+    "status": "completed",
+    "service_category": "emergency gas leak",
+    "value": 1575.02,
+    "technician": "Chris Wallace",
+    "scheduled_at": "2026-06-18T03:58:00",
+    "completed_at": "2026-06-18T07:23:00"
+  },
+  {
+    "job_id": "76738966-9b02-a56d-32b5-5d35e67646f1",
+    "related_call_id": "fc3e058b-e0f3-eab0-5cec-4eb5edd96831",
+    "status": "completed",
+    "service_category": "roof leak",
+    "value": 1190.61,
+    "technician": "Mike Rivera",
+    "scheduled_at": "2026-06-22T04:22:00",
+    "completed_at": "2026-06-22T08:55:00"
+  },
+  {
+    "job_id": "80d16aaf-f1a4-1fe5-2d78-dc4bfb9e8dda",
+    "related_call_id": "89c5b31a-eb6c-1016-cee6-24d09dac6e83",
+    "status": "completed",
+    "service_category": "emergency gas leak",
+    "value": 823.73,
+    "technician": "Tyler Brooks",
+    "scheduled_at": "2026-06-20T03:15:00",
+    "completed_at": "2026-06-20T09:14:00"
+  },
+  {
+    "job_id": "2495da17-1605-5583-a1cb-b7236ce8571b",
+    "related_call_id": "964db03f-9340-3fad-dc4a-d56bd6016237",
+    "status": "completed",
+    "service_category": "water heater replacement",
+    "value": 839.62,
+    "technician": "Jake Morrison",
+    "scheduled_at": "2026-06-22T03:13:00",
+    "completed_at": "2026-06-22T05:12:00"
+  },
+  {
+    "job_id": "0e2eb028-f94c-f6b0-c986-fa9fe6647183",
+    "related_call_id": "966b1964-fcd6-bdca-5876-fd09f1faf665",
+    "status": "completed",
+    "service_category": "emergency gas leak",
+    "value": 1071.59,
+    "technician": "Priya Sharma",
+    "scheduled_at": "2026-06-20T07:17:00",
+    "completed_at": "2026-06-20T11:29:00"
+  },
+  {
+    "job_id": "bd11e14f-2184-6d9e-0e4a-1175ec154269",
+    "related_call_id": "d534ee1d-7f29-84f5-bec3-9a379b3d74bd",
+    "status": "completed",
+    "service_category": "roof leak",
+    "value": 790.92,
+    "technician": "Tyler Brooks",
+    "scheduled_at": "2026-06-20T22:11:00",
+    "completed_at": "2026-06-21T04:41:00"
+  },
+  {
+    "job_id": "68ed8a23-2d7a-2d12-fdba-24d02c941da5",
+    "related_call_id": "6f18c108-1723-199d-bf2c-14a03a3c8a71",
+    "status": "completed",
+    "service_category": "HVAC maintenance",
+    "value": 363.32,
+    "technician": "Tyler Brooks",
+    "scheduled_at": "2026-06-19T20:58:00",
+    "completed_at": "2026-06-19T23:16:00"
+  },
+  {
+    "job_id": "41f1fc30-d89b-acfa-3be1-4460cc477944",
+    "related_call_id": "a21b0307-82af-085c-138d-994c2b0abedd",
+    "status": "cancelled",
+    "service_category": "roof leak",
+    "value": 1092.39,
+    "technician": "Sandra Liu",
+    "scheduled_at": "2026-06-22T06:13:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "0c349a2a-d522-3ad8-95ef-f22502daa0b3",
+    "related_call_id": "32399ffb-2704-6f25-4b91-b8cb6ae66582",
+    "status": "scheduled",
+    "service_category": "bathroom remodel estimate",
+    "value": 276.6,
+    "technician": "Ana Gutierrez",
+    "scheduled_at": "2026-07-21T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "2e64ca6e-17b8-d928-88cc-55935ef852e5",
+    "related_call_id": "de9e3757-5260-001e-eecf-67d2749176f4",
+    "status": "completed",
+    "service_category": "emergency gas leak",
+    "value": 1098.65,
+    "technician": "Mike Rivera",
+    "scheduled_at": "2026-06-23T07:32:00",
+    "completed_at": "2026-06-23T12:24:00"
+  },
+  {
+    "job_id": "a7827019-da84-5a33-4fb9-23ce3aef0786",
+    "related_call_id": "6c93a791-8b60-c511-b816-8aebac6a7c85",
+    "status": "cancelled",
+    "service_category": "roof leak",
+    "value": 949.49,
+    "technician": "Priya Sharma",
+    "scheduled_at": "2026-06-24T10:12:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "4bdf5899-6230-a1f3-3fed-b013b62c765d",
+    "related_call_id": "6bc4123e-bde1-3c1b-2073-3f6d0d6a05b3",
+    "status": "completed",
+    "service_category": "HVAC maintenance",
+    "value": 324.26,
+    "technician": "Kenji Ota",
+    "scheduled_at": "2026-06-24T03:23:00",
+    "completed_at": "2026-06-24T10:06:00"
+  },
+  {
+    "job_id": "e83ea120-4b04-0005-80ce-7b5711d65409",
+    "related_call_id": "4a27ebf2-8baa-f744-a08d-d21be3954cb1",
+    "status": "scheduled",
+    "service_category": "thermostat installation",
+    "value": 170.03,
+    "technician": "Ana Gutierrez",
+    "scheduled_at": "2026-07-21T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "d389adde-a880-efe7-f7d6-534c68ca0310",
+    "related_call_id": "f4ff3f3a-4d9d-baeb-553d-2625e8334da5",
+    "status": "scheduled",
+    "service_category": "roof leak",
+    "value": 779.92,
+    "technician": "Tyler Brooks",
+    "scheduled_at": "2026-07-21T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "586afe5f-3299-a5c0-e331-f1f5563b9c31",
+    "related_call_id": "8dedf9fb-4bb0-0f20-b27c-40266703b636",
+    "status": "completed",
+    "service_category": "emergency gas leak",
+    "value": 1517.36,
+    "technician": "Mike Rivera",
+    "scheduled_at": "2026-06-28T06:28:00",
+    "completed_at": "2026-06-28T08:52:00"
+  },
+  {
+    "job_id": "c0adb931-be36-4e38-6aad-af4ca83c11d2",
+    "related_call_id": "c1b5b5ca-bc35-36df-94f7-9dbac5811d2d",
+    "status": "completed",
+    "service_category": "drain cleaning",
+    "value": 273.58,
+    "technician": "Priya Sharma",
+    "scheduled_at": "2026-06-25T05:38:00",
+    "completed_at": "2026-06-25T11:54:00"
+  },
+  {
+    "job_id": "85a85ac8-0054-b3fa-33d6-e7118820aa64",
+    "related_call_id": "333ee344-7dbf-4bc1-ffa6-23d0ea9e5c8d",
+    "status": "completed",
+    "service_category": "HVAC maintenance",
+    "value": 544.7,
+    "technician": "Jake Morrison",
+    "scheduled_at": "2026-06-27T20:47:00",
+    "completed_at": "2026-06-27T22:19:00"
+  },
+  {
+    "job_id": "eedf1753-71b1-a3f3-ce48-62a9c8ed57cc",
+    "related_call_id": "d8f56413-5be6-128e-18c2-67976142ea7d",
+    "status": "cancelled",
+    "service_category": "plumbing repair",
+    "value": 443.49,
+    "technician": "Priya Sharma",
+    "scheduled_at": "2026-06-26T05:39:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "a1b6c6c0-c492-9027-9eab-75cda0400241",
+    "related_call_id": "265cb9d9-8962-8f6e-929c-93b333c08bf1",
+    "status": "completed",
+    "service_category": "panel upgrade",
+    "value": 2643.49,
+    "technician": "Jake Morrison",
+    "scheduled_at": "2026-06-28T05:56:00",
+    "completed_at": "2026-06-28T11:29:00"
+  },
+  {
+    "job_id": "6ab1a1cf-0eed-8d91-f60d-226b082e9678",
+    "related_call_id": "bdb025ff-2451-e5a4-11d0-59b26699cd99",
+    "status": "completed",
+    "service_category": "HVAC maintenance",
+    "value": 208.25,
+    "technician": "Jake Morrison",
+    "scheduled_at": "2026-06-25T03:02:00",
+    "completed_at": "2026-06-25T04:39:00"
+  },
+  {
+    "job_id": "cb2aa305-dd1c-0115-fde7-f97b19a0e824",
+    "related_call_id": "58330b30-6c77-6e95-0b98-1ccd12b2102d",
+    "status": "completed",
+    "service_category": "plumbing repair",
+    "value": 317.17,
+    "technician": "Chris Wallace",
+    "scheduled_at": "2026-06-30T03:14:00",
+    "completed_at": "2026-06-30T06:02:00"
+  },
+  {
+    "job_id": "de304b88-7251-0067-e6da-3df221732be4",
+    "related_call_id": "238d6f44-cac4-d0eb-3373-730efc31a597",
+    "status": "completed",
+    "service_category": "plumbing repair",
+    "value": 201.68,
+    "technician": "Chris Wallace",
+    "scheduled_at": "2026-06-30T06:10:00",
+    "completed_at": "2026-06-30T09:06:00"
+  },
+  {
+    "job_id": "d8270e93-929a-15ea-7691-ca9f460934a0",
+    "related_call_id": "16419f82-8b9d-2434-e465-e150bd9c66b3",
+    "status": "completed",
+    "service_category": "plumbing repair",
+    "value": 436.3,
+    "technician": "Chris Wallace",
+    "scheduled_at": "2026-06-28T07:59:00",
+    "completed_at": "2026-06-28T11:12:00"
+  },
+  {
+    "job_id": "3d54a854-881b-1a78-1322-8339fafdd23d",
+    "related_call_id": "248d31ec-07f8-d4f0-f3ea-018428f4e3ce",
+    "status": "completed",
+    "service_category": "thermostat installation",
+    "value": 378.17,
+    "technician": "Kenji Ota",
+    "scheduled_at": "2026-06-30T10:56:00",
+    "completed_at": "2026-06-30T17:06:00"
+  },
+  {
+    "job_id": "ae3dbd67-91d2-7b48-0102-3f71bbd5928a",
+    "related_call_id": "6e218b09-9afd-4015-816b-cb9f7426b193",
+    "status": "completed",
+    "service_category": "HVAC maintenance",
+    "value": 245.95,
+    "technician": "Jake Morrison",
+    "scheduled_at": "2026-06-30T18:23:00",
+    "completed_at": "2026-06-30T22:04:00"
+  },
+  {
+    "job_id": "65b30463-0c28-33fd-eb84-bde9969088ba",
+    "related_call_id": "b2c08394-e17f-29e1-7028-604649bc473f",
+    "status": "completed",
+    "service_category": "bathroom remodel estimate",
+    "value": 354.03,
+    "technician": "Mike Rivera",
+    "scheduled_at": "2026-07-01T00:20:00",
+    "completed_at": "2026-07-01T02:28:00"
+  },
+  {
+    "job_id": "c6686cf6-b20e-bbdb-0eb8-c0a170679de5",
+    "related_call_id": "15969802-b6dd-6257-fb7d-9f1c57eb89b1",
+    "status": "completed",
+    "service_category": "plumbing repair",
+    "value": 303.4,
+    "technician": "Chris Wallace",
+    "scheduled_at": "2026-07-02T00:28:00",
+    "completed_at": "2026-07-02T03:21:00"
+  },
+  {
+    "job_id": "8f488fef-1215-d10b-5d7b-b286a8268a9d",
+    "related_call_id": "743b65a2-dc0f-2fcf-b3f6-fe0d48603b32",
+    "status": "completed",
+    "service_category": "water heater replacement",
+    "value": 1120.41,
+    "technician": "Priya Sharma",
+    "scheduled_at": "2026-06-30T22:42:00",
+    "completed_at": "2026-07-01T01:59:00"
+  },
+  {
+    "job_id": "b9891455-1d12-95d4-ad89-29e1be510923",
+    "related_call_id": "4639447b-2067-bdac-88bd-13d1b540b30e",
+    "status": "scheduled",
+    "service_category": "panel upgrade",
+    "value": 1016.74,
+    "technician": "Tyler Brooks",
+    "scheduled_at": "2026-07-18T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "2aa3eddc-6116-35e9-a588-6094834279d3",
+    "related_call_id": "1e43fbd2-aaf4-07f7-0fe7-61493c7e5368",
+    "status": "scheduled",
+    "service_category": "emergency gas leak",
+    "value": 725.3,
+    "technician": "Ana Gutierrez",
+    "scheduled_at": "2026-07-29T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "57a7aacf-e4a1-2fec-0d85-0e9cc5eec892",
+    "related_call_id": "e61fecc0-0a36-8ce7-dc57-0131f8e1daa7",
+    "status": "scheduled",
+    "service_category": "roof leak",
+    "value": 945.25,
+    "technician": "Chris Wallace",
+    "scheduled_at": "2026-07-22T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "ee072027-bb0e-a080-8570-12b4f775c31d",
+    "related_call_id": "0e0630cd-996d-5c50-fc04-a168652ffb49",
+    "status": "completed",
+    "service_category": "roof leak",
+    "value": 461.62,
+    "technician": "Mike Rivera",
+    "scheduled_at": "2026-06-28T22:27:00",
+    "completed_at": "2026-06-29T03:08:00"
+  },
+  {
+    "job_id": "dfcb52e8-9a3a-80e3-cafd-d23abba61b36",
+    "related_call_id": "7fc15858-2fa0-d842-bc55-300b06a241af",
+    "status": "completed",
+    "service_category": "panel upgrade",
+    "value": 2800.35,
+    "technician": "Sandra Liu",
+    "scheduled_at": "2026-06-29T04:27:00",
+    "completed_at": "2026-06-29T09:55:00"
+  },
+  {
+    "job_id": "0bac7b02-96dc-240d-503a-be5a40c4c040",
+    "related_call_id": "857dd3b3-a8ad-df36-ddf2-75ebe8a3f341",
+    "status": "scheduled",
+    "service_category": "plumbing repair",
+    "value": 198.43,
+    "technician": "Chris Wallace",
+    "scheduled_at": "2026-07-22T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "1fa491d3-4a44-2526-4bb5-16118e56321d",
+    "related_call_id": "bf1e8366-4b8e-63d4-ce76-07adf7a67b94",
+    "status": "completed",
+    "service_category": "HVAC maintenance",
+    "value": 579.44,
+    "technician": "Kenji Ota",
+    "scheduled_at": "2026-07-01T19:02:00",
+    "completed_at": "2026-07-01T22:53:00"
+  },
+  {
+    "job_id": "a9fb4d98-55a4-0bee-d8b9-859f513c459b",
+    "related_call_id": "6b79afcc-3d0a-5f0c-0c39-4ec71f317405",
+    "status": "completed",
+    "service_category": "thermostat installation",
+    "value": 168.08,
+    "technician": "Ana Gutierrez",
+    "scheduled_at": "2026-07-02T23:53:00",
+    "completed_at": "2026-07-03T05:36:00"
+  },
+  {
+    "job_id": "b191d35f-2697-5eb5-8c48-2df23a04c24e",
+    "related_call_id": "e1e3db63-ef7d-dc76-b92d-a22b21df306f",
+    "status": "scheduled",
+    "service_category": "roof leak",
+    "value": 1171.87,
+    "technician": "Mike Rivera",
+    "scheduled_at": "2026-07-26T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "3a5306ae-c655-94e7-e6b7-c74fb7326434",
+    "related_call_id": "a2814044-6f96-2882-95d8-2980ff37d19c",
+    "status": "scheduled",
+    "service_category": "HVAC maintenance",
+    "value": 575.53,
+    "technician": "Tyler Brooks",
+    "scheduled_at": "2026-07-25T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "180d888b-9132-cc3c-d7f3-26dc29f11e5b",
+    "related_call_id": "6232b17a-2507-4181-8d1f-b54074eff545",
+    "status": "completed",
+    "service_category": "electrical inspection",
+    "value": 298.33,
+    "technician": "Chris Wallace",
+    "scheduled_at": "2026-07-03T02:28:00",
+    "completed_at": "2026-07-03T08:44:00"
+  },
+  {
+    "job_id": "e1521740-fd3c-5494-0faf-7f434cebb0f1",
+    "related_call_id": "a518a418-6f14-b3f6-d867-888b7ff6b824",
+    "status": "completed",
+    "service_category": "HVAC maintenance",
+    "value": 577.44,
+    "technician": "Jake Morrison",
+    "scheduled_at": "2026-07-03T05:20:00",
+    "completed_at": "2026-07-03T08:00:00"
+  },
+  {
+    "job_id": "fde2cfd3-efdb-9246-6554-d19080c32bfa",
+    "related_call_id": "0463750e-4964-6b96-fa3c-1628892621df",
+    "status": "completed",
+    "service_category": "emergency gas leak",
+    "value": 1646.3,
+    "technician": "Kenji Ota",
+    "scheduled_at": "2026-07-03T04:00:00",
+    "completed_at": "2026-07-03T10:02:00"
+  },
+  {
+    "job_id": "5e9c7787-174b-626d-9cba-95f3eabbc5de",
+    "related_call_id": "a65f7b8a-dbb4-4021-fdde-64afa75b395a",
+    "status": "completed",
+    "service_category": "emergency gas leak",
+    "value": 1382.34,
+    "technician": "Tyler Brooks",
+    "scheduled_at": "2026-07-05T00:45:00",
+    "completed_at": "2026-07-05T03:15:00"
+  },
+  {
+    "job_id": "2c6f9f32-ccf7-1d1a-e7fe-9bb833a10b7c",
+    "related_call_id": "68a51c68-632d-bb5e-486b-b6bfeafde7d9",
+    "status": "completed",
+    "service_category": "bathroom remodel estimate",
+    "value": 350.51,
+    "technician": "Tyler Brooks",
+    "scheduled_at": "2026-07-03T20:27:00",
+    "completed_at": "2026-07-04T01:06:00"
+  },
+  {
+    "job_id": "8126fe4b-ccfd-487e-ac18-b6ea840d2b55",
+    "related_call_id": "750d112e-8164-ceec-64ab-851bf1fac6e7",
+    "status": "completed",
+    "service_category": "drain cleaning",
+    "value": 324.35,
+    "technician": "Sandra Liu",
+    "scheduled_at": "2026-07-04T00:04:00",
+    "completed_at": "2026-07-04T02:45:00"
+  },
+  {
+    "job_id": "52f40238-4020-98bd-3dda-ee01128e3301",
+    "related_call_id": "f10013a7-c6de-b2f0-530a-c1c7b8ba8368",
+    "status": "completed",
+    "service_category": "plumbing repair",
+    "value": 307.35,
+    "technician": "Ana Gutierrez",
+    "scheduled_at": "2026-07-08T03:31:00",
+    "completed_at": "2026-07-08T09:06:00"
+  },
+  {
+    "job_id": "0ccaff3c-ecda-7589-308b-293050b05ccb",
+    "related_call_id": "24c778a5-9b4e-164b-5716-dc2e343ada2a",
+    "status": "completed",
+    "service_category": "drain cleaning",
+    "value": 124.26,
+    "technician": "Jake Morrison",
+    "scheduled_at": "2026-07-04T23:31:00",
+    "completed_at": "2026-07-05T03:34:00"
+  },
+  {
+    "job_id": "5d527cc8-b9c6-e510-323c-c9164b9ae6cb",
+    "related_call_id": "54aebd1b-8ce6-424d-bef5-9fe6ff233d5f",
+    "status": "completed",
+    "service_category": "water heater replacement",
+    "value": 2330.39,
+    "technician": "Sandra Liu",
+    "scheduled_at": "2026-07-07T00:41:00",
+    "completed_at": "2026-07-07T06:14:00"
+  },
+  {
+    "job_id": "f5560abf-f18c-69e3-0e45-f7e873d015ba",
+    "related_call_id": "a7cf705c-c257-cf73-c29d-782b2722796e",
+    "status": "completed",
+    "service_category": "thermostat installation",
+    "value": 247.31,
+    "technician": "Mike Rivera",
+    "scheduled_at": "2026-07-08T01:08:00",
+    "completed_at": "2026-07-08T04:20:00"
+  },
+  {
+    "job_id": "60117423-e3cd-2218-5166-db40f0fd246c",
+    "related_call_id": "b807d78a-b788-f5d1-ffe5-75f665edcfe3",
+    "status": "completed",
+    "service_category": "emergency gas leak",
+    "value": 711.7,
+    "technician": "Priya Sharma",
+    "scheduled_at": "2026-07-06T02:09:00",
+    "completed_at": "2026-07-06T03:31:00"
+  },
+  {
+    "job_id": "4183eec3-9ee8-33d0-57f3-923438dccd08",
+    "related_call_id": "ad05b912-5ab2-8d4a-8bd8-8fcd57a2be4e",
+    "status": "completed",
+    "service_category": "water heater replacement",
+    "value": 2125.66,
+    "technician": "Sandra Liu",
+    "scheduled_at": "2026-07-06T17:30:00",
+    "completed_at": "2026-07-06T19:43:00"
+  },
+  {
+    "job_id": "7f467bc8-5ea8-f382-ba19-cbd9f900309a",
+    "related_call_id": "dbfdd97e-aca2-b148-da33-0aa1541cdfcd",
+    "status": "completed",
+    "service_category": "drain cleaning",
+    "value": 208.51,
+    "technician": "Chris Wallace",
+    "scheduled_at": "2026-07-09T19:16:00",
+    "completed_at": "2026-07-10T02:10:00"
+  },
+  {
+    "job_id": "45f5180a-1ddf-4a4d-cef3-461658498d4e",
+    "related_call_id": "c51155ff-e7a3-7e81-63b4-c08b6b8e869f",
+    "status": "completed",
+    "service_category": "bathroom remodel estimate",
+    "value": 281.55,
+    "technician": "Priya Sharma",
+    "scheduled_at": "2026-07-10T23:31:00",
+    "completed_at": "2026-07-11T03:16:00"
+  },
+  {
+    "job_id": "9f10a881-4e8b-51f7-e055-5092455f0562",
+    "related_call_id": "c9c23e69-d82c-7565-4bb9-07ec13c11754",
+    "status": "completed",
+    "service_category": "panel upgrade",
+    "value": 679.75,
+    "technician": "Priya Sharma",
+    "scheduled_at": "2026-07-09T01:48:00",
+    "completed_at": "2026-07-09T06:54:00"
+  },
+  {
+    "job_id": "62280b86-c6d6-fd92-13df-fafc430d7056",
+    "related_call_id": "d045dd1c-6684-09e3-f1f8-343ea99f1318",
+    "status": "completed",
+    "service_category": "thermostat installation",
+    "value": 316.29,
+    "technician": "Sandra Liu",
+    "scheduled_at": "2026-07-10T22:18:00",
+    "completed_at": "2026-07-11T04:05:00"
+  },
+  {
+    "job_id": "8278a9a6-5226-6f4a-c12d-68b3edf27cc8",
+    "related_call_id": "cc6b66e5-402a-df9c-8a4b-8f7c21472a15",
+    "status": "scheduled",
+    "service_category": "plumbing repair",
+    "value": 234.69,
+    "technician": "Priya Sharma",
+    "scheduled_at": "2026-07-29T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "ecdf4b5b-974d-b651-1170-65ec355a96f4",
+    "related_call_id": "6231ee73-42c2-d2eb-01bf-9e733f800385",
+    "status": "completed",
+    "service_category": "water heater replacement",
+    "value": 1708.79,
+    "technician": "Jake Morrison",
+    "scheduled_at": "2026-07-07T06:35:00",
+    "completed_at": "2026-07-07T11:24:00"
+  },
+  {
+    "job_id": "a25dad4e-1567-be6c-9027-8ffd0c2c853d",
+    "related_call_id": "c6b28def-f8d8-b7f1-c86c-6544a7d4cf50",
+    "status": "completed",
+    "service_category": "plumbing repair",
+    "value": 297.03,
+    "technician": "Tyler Brooks",
+    "scheduled_at": "2026-07-11T18:59:00",
+    "completed_at": "2026-07-12T01:00:00"
+  },
+  {
+    "job_id": "37d34b71-5207-42a4-cca1-b37e1f11ad8e",
+    "related_call_id": "8e676a01-d86a-6460-59a1-120e1bb43332",
+    "status": "scheduled",
+    "service_category": "water heater replacement",
+    "value": 1127.03,
+    "technician": "Priya Sharma",
+    "scheduled_at": "2026-07-17T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "c61f9a02-d1a6-e617-2284-9e29d680fa03",
+    "related_call_id": "25440fe0-6e41-7d47-5ff5-95ea5bc440f1",
+    "status": "completed",
+    "service_category": "bathroom remodel estimate",
+    "value": 497.66,
+    "technician": "Jake Morrison",
+    "scheduled_at": "2026-07-08T09:58:00",
+    "completed_at": "2026-07-08T13:09:00"
+  },
+  {
+    "job_id": "6b2bd7c5-c073-254a-2f4a-8b98d786f714",
+    "related_call_id": "3b33f3d8-269c-d696-236c-7b8714a0bccb",
+    "status": "cancelled",
+    "service_category": "roof leak",
+    "value": 935.1,
+    "technician": "Chris Wallace",
+    "scheduled_at": "2026-07-09T00:56:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "c0c00c7b-2886-c90f-ba2a-c843fc97df82",
+    "related_call_id": "8892042f-9d4b-2bf9-4d85-e9c7a0017720",
+    "status": "completed",
+    "service_category": "electrical inspection",
+    "value": 115.54,
+    "technician": "Jake Morrison",
+    "scheduled_at": "2026-07-13T04:20:00",
+    "completed_at": "2026-07-13T08:14:00"
+  },
+  {
+    "job_id": "e36fc0cc-20e0-dc0c-6422-df547934e824",
+    "related_call_id": "b6f6dbf1-d6d4-41cc-195d-82f8ee4a9b5d",
+    "status": "scheduled",
+    "service_category": "electrical inspection",
+    "value": 107.03,
+    "technician": "Jake Morrison",
+    "scheduled_at": "2026-07-21T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "2f32b6b4-a26f-ccf9-40c1-f16d8006dad7",
+    "related_call_id": "3ff350bf-766e-cb15-474e-bc192ef91276",
+    "status": "completed",
+    "service_category": "thermostat installation",
+    "value": 204.38,
+    "technician": "Kenji Ota",
+    "scheduled_at": "2026-07-14T04:48:00",
+    "completed_at": "2026-07-14T09:04:00"
+  },
+  {
+    "job_id": "841b96d3-9a14-2a58-5ae5-48429d185a63",
+    "related_call_id": "fbf24050-a748-dbcf-ac61-9e630dde29a6",
+    "status": "completed",
+    "service_category": "emergency gas leak",
+    "value": 785.49,
+    "technician": "Sandra Liu",
+    "scheduled_at": "2026-07-15T04:54:00",
+    "completed_at": "2026-07-15T10:08:00"
+  },
+  {
+    "job_id": "94aa1317-6648-e4f2-bbce-df18c9105612",
+    "related_call_id": "da4bd9ca-eb5c-f467-80ba-cd647a0ecfea",
+    "status": "completed",
+    "service_category": "panel upgrade",
+    "value": 1644.06,
+    "technician": "Sandra Liu",
+    "scheduled_at": "2026-07-12T03:23:00",
+    "completed_at": "2026-07-12T07:09:00"
+  },
+  {
+    "job_id": "168ca63c-eee7-708a-de8e-81e231f23e1b",
+    "related_call_id": "e9b5c5cf-d766-5cda-fe04-90593985fb62",
+    "status": "completed",
+    "service_category": "HVAC maintenance",
+    "value": 235.37,
+    "technician": "Priya Sharma",
+    "scheduled_at": "2026-07-15T00:25:00",
+    "completed_at": "2026-07-15T01:25:00"
+  },
+  {
+    "job_id": "30a102ee-a422-9417-ad36-3cde8e129c90",
+    "related_call_id": "08a8ac7f-8621-38ad-0f09-105cf50d7a37",
+    "status": "completed",
+    "service_category": "plumbing repair",
+    "value": 184.36,
+    "technician": "Sandra Liu",
+    "scheduled_at": "2026-07-14T05:14:00",
+    "completed_at": "2026-07-14T08:06:00"
+  },
+  {
+    "job_id": "a61294a6-7168-e1ba-0af6-401f8101e9e7",
+    "related_call_id": "760debbb-3b70-b3a1-24a3-5cf29549c931",
+    "status": "completed",
+    "service_category": "water heater replacement",
+    "value": 1350.18,
+    "technician": "Jake Morrison",
+    "scheduled_at": "2026-07-13T05:55:00",
+    "completed_at": "2026-07-13T10:16:00"
+  },
+  {
+    "job_id": "e9a494f9-b21d-503d-5338-edc4b3fbf7f6",
+    "related_call_id": "2ced3c0d-3173-04b5-c1dd-484aaca58d95",
+    "status": "completed",
+    "service_category": "emergency gas leak",
+    "value": 1424.82,
+    "technician": "Priya Sharma",
+    "scheduled_at": "2026-07-13T08:13:00",
+    "completed_at": "2026-07-13T10:15:00"
+  },
+  {
+    "job_id": "9a8e7736-29e1-5f35-f5e5-696379e89037",
+    "related_call_id": "5f8a14bd-74bd-0c93-8177-b66137fe032c",
+    "status": "scheduled",
+    "service_category": "bathroom remodel estimate",
+    "value": 433.84,
+    "technician": "Ana Gutierrez",
+    "scheduled_at": "2026-07-28T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "271f265a-5813-066d-97ee-f7c49b1bb570",
+    "related_call_id": "b8f21423-03ed-d1f8-74f9-3d17e912b4bf",
+    "status": "completed",
+    "service_category": "electrical inspection",
+    "value": 245.7,
+    "technician": "Tyler Brooks",
+    "scheduled_at": "2026-07-16T23:23:00",
+    "completed_at": "2026-07-17T00:24:00"
+  },
+  {
+    "job_id": "54331773-8db6-86c0-2c48-f0e25ce88e4b",
+    "related_call_id": "2253e706-87ad-8b26-8eaa-58416aa0426d",
+    "status": "completed",
+    "service_category": "roof leak",
+    "value": 361.47,
+    "technician": "Sandra Liu",
+    "scheduled_at": "2026-07-15T04:02:00",
+    "completed_at": "2026-07-15T07:55:00"
+  },
+  {
+    "job_id": "2cf00640-0a4e-7c23-2856-cb32a2be058b",
+    "related_call_id": "19a692c9-0d70-0ea4-3b9b-2d45a35055e4",
+    "status": "scheduled",
+    "service_category": "thermostat installation",
+    "value": 223.9,
+    "technician": "Sandra Liu",
+    "scheduled_at": "2026-07-20T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "ec164bb8-d52e-bb4f-a43b-47b9979501d1",
+    "related_call_id": "a18ff6b6-b535-106e-122c-9a5601d74256",
+    "status": "completed",
+    "service_category": "plumbing repair",
+    "value": 278.62,
+    "technician": "Chris Wallace",
+    "scheduled_at": "2026-07-18T08:46:00",
+    "completed_at": "2026-07-18T13:09:00"
+  },
+  {
+    "job_id": "012603fd-eb47-90ee-193e-1b85ae582630",
+    "related_call_id": "5abca6e5-d0b1-e3eb-409e-7a8086c5d1d6",
+    "status": "completed",
+    "service_category": "HVAC maintenance",
+    "value": 567.39,
+    "technician": "Ana Gutierrez",
+    "scheduled_at": "2026-07-16T04:27:00",
+    "completed_at": "2026-07-16T05:43:00"
+  },
+  {
+    "job_id": "eee8cea1-fe74-fdfe-4a10-21cffa07f9f6",
+    "related_call_id": "91d63f78-e3e9-de99-f10c-718b1eb0e38a",
+    "status": "completed",
+    "service_category": "plumbing repair",
+    "value": 328.03,
+    "technician": "Jake Morrison",
+    "scheduled_at": "2026-07-18T19:56:00",
+    "completed_at": "2026-07-19T01:38:00"
+  },
+  {
+    "job_id": "f20a3830-db70-97b3-c489-c3e6c88486e2",
+    "related_call_id": "d3f4a49b-33ba-ba88-36c7-d6fa7aa4f052",
+    "status": "completed",
+    "service_category": "panel upgrade",
+    "value": 909.44,
+    "technician": "Mike Rivera",
+    "scheduled_at": "2026-07-16T02:01:00",
+    "completed_at": "2026-07-16T08:43:00"
+  },
+  {
+    "job_id": "4da57da0-43de-b348-20da-bcc78d6a8d4e",
+    "related_call_id": "6a5e6920-bf5a-e7e6-53a3-dd5a4b8c5bdc",
+    "status": "completed",
+    "service_category": "panel upgrade",
+    "value": 1884.1,
+    "technician": "Chris Wallace",
+    "scheduled_at": "2026-07-16T21:37:00",
+    "completed_at": "2026-07-17T02:10:00"
+  },
+  {
+    "job_id": "10f8b561-a6b6-fe2b-7a66-441b3a7d2812",
+    "related_call_id": "92ca525a-6de5-9332-9364-f3d05024bdc6",
+    "status": "scheduled",
+    "service_category": "emergency gas leak",
+    "value": 638.71,
+    "technician": "Kenji Ota",
+    "scheduled_at": "2026-07-24T12:00:00",
+    "completed_at": null
+  },
+  {
+    "job_id": "11e43320-cabf-ea20-cfab-ca6e7427f54f",
+    "related_call_id": "f2a03459-9060-4f62-1d48-a071ab61a7b1",
+    "status": "scheduled",
+    "service_category": "water heater replacement",
+    "value": 1210.84,
+    "technician": "Ana Gutierrez",
+    "scheduled_at": "2026-07-19T12:00:00",
+    "completed_at": null
+  }
+]
