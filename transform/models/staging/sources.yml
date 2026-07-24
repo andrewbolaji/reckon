@@ -3,6 +3,10 @@ version: 2
 sources:
   - name: raw
     schema: raw
+    # "raw" is a reserved word in Amazon Redshift; quote the schema so source
+    # refs and freshness checks emit "raw".<table> instead of a syntax error.
+    quoting:
+      schema: true
     freshness:
       warn_after: {count: 24, period: hour}
       error_after: {count: 48, period: hour}
