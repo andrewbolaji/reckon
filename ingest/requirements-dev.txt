@@ -1,0 +1,5 @@
+# Test-only dependencies for the ingest package.
+# Kept out of requirements.txt so the pipeline runtime image stays lean.
+-r requirements.txt
+pytest==8.3.2
+moto[s3]==5.0.13

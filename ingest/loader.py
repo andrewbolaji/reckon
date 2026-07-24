@@ -1,28 +1,17 @@
 """Load raw JSON from the data lake into the warehouse staging schema."""
 
-import json
-from pathlib import Path
-
 import psycopg2
 from psycopg2.extras import execute_values
 
 from ingest.config import LakeConfig, WarehouseConfig
-
-
-def _load_local_files(lake: LakeConfig, source: str) -> list[dict]:
-    """Read all JSON files for a source from the local lake."""
-    source_dir = Path(lake.path) / "raw" / source
-    records = []
-    for f in sorted(source_dir.rglob("*.json")):
-        records.extend(json.loads(f.read_text()))
-    return records
+from ingest.lake import read_raw
 
 
 def load_to_warehouse(
     lake: LakeConfig, wh: WarehouseConfig, source: str, table: str, columns: list[str]
 ):
     """Load raw lake data into a warehouse raw table."""
-    records = _load_local_files(lake, source)
+    records = read_raw(lake, source)
     if not records:
         print(f"  No records for {source}, skipping.")
         return 0
