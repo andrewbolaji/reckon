@@ -2,12 +2,23 @@
 
 Gated on OTEL_ENABLED=true. All pushes are non-fatal: if the Pushgateway
 is unreachable or OTEL is disabled, the pipeline still succeeds.
+
+Orchestration reports through here too, so a Dagster run failure reaches the
+same Prometheus and the same Alertmanager as everything else rather than
+growing a second alerting story. Pushes use POST (``pushadd_to_gateway``), not
+PUT, and the distinction is load-bearing: a PUT replaces every metric in the
+job's group, so a failure push would wipe ``pipeline_last_success_timestamp``
+and quietly disarm PipelineFreshnessBreach. With POST, the last success stands
+and keeps ageing while runs fail, which is exactly what should trip that alert.
 """
 
 import json
 import os
 import time
 from pathlib import Path
+
+PUSH_JOB = "reckon_pipeline"
+PUSH_TIMEOUT = 5  # seconds
 
 
 def _pushgateway_url():
@@ -23,7 +34,16 @@ def push_pipeline_metrics(
     rows_by_source: dict[str, int],
     dbt_results_path: str | None = None,
 ):
-    """Push pipeline run metrics to the Prometheus Pushgateway.
+    """Push metrics for a successful pipeline run. See ``push_run_success``."""
+    push_run_success(duration_seconds, rows_by_source, dbt_results_path)
+
+
+def push_run_success(
+    duration_seconds: float,
+    rows_by_source: dict[str, int],
+    dbt_results_path: str | None = None,
+):
+    """Push metrics for a successful run to the Prometheus Pushgateway.
 
     Non-fatal: swallows all exceptions with a log line. The pipeline
     must never fail because observability is unavailable.
@@ -37,23 +57,73 @@ def push_pipeline_metrics(
         return
 
     try:
-        _do_push(duration_seconds, rows_by_source, dbt_results_path)
+        _do_push_success(duration_seconds, rows_by_source, dbt_results_path)
     except Exception as e:
         print(f"[telemetry] Metrics push failed (non-fatal): {e}")
 
 
-def _do_push(
+def push_run_failure(reason: str, dbt_results_path: str | None = None):
+    """Push metrics for a failed run.
+
+    Deliberately does not touch ``pipeline_last_success_timestamp``: a run that
+    fails did not succeed, and letting that timestamp age is how a pipeline
+    stuck failing eventually trips PipelineFreshnessBreach on its own.
+
+    The reason is logged rather than made a metric label. Free text in a label
+    means unbounded cardinality, and a label that changes every failure never
+    resolves cleanly in Alertmanager.
+    """
+    print(
+        "[telemetry] "
+        + json.dumps({"event": "pipeline_run_failed", "reason": reason})
+    )
+    if not _enabled():
+        return
+
+    try:
+        _do_push_failure(dbt_results_path)
+    except Exception as e:
+        print(f"[telemetry] Metrics push failed (non-fatal): {e}")
+
+
+def _push(registry):
+    from prometheus_client import pushadd_to_gateway
+
+    url = _pushgateway_url()
+    pushadd_to_gateway(url, job=PUSH_JOB, registry=registry, timeout=PUSH_TIMEOUT)
+    print(f"[telemetry] Metrics pushed to {url}")
+
+
+def _run_failed_gauge(registry):
+    from prometheus_client import Gauge
+
+    return Gauge(
+        "pipeline_run_failed",
+        "1 if the most recent pipeline run failed, 0 if it succeeded",
+        registry=registry,
+    )
+
+
+def _dbt_results_gauge(registry, dbt_results_path: str | None):
+    from prometheus_client import Gauge
+
+    gauge = Gauge(
+        "pipeline_dbt_test_results",
+        "Count of dbt test results by status",
+        ["status"],
+        registry=registry,
+    )
+    for status, count in _parse_dbt_results(dbt_results_path).items():
+        gauge.labels(status=status).set(count)
+    return gauge
+
+
+def _do_push_success(
     duration_seconds: float,
     rows_by_source: dict[str, int],
     dbt_results_path: str | None,
 ):
-    from prometheus_client import (
-        CollectorRegistry,
-        Counter,
-        Gauge,
-        Histogram,
-        push_to_gateway,
-    )
+    from prometheus_client import CollectorRegistry, Gauge
 
     registry = CollectorRegistry()
 
@@ -84,20 +154,25 @@ def _do_push(
         rows_gauge.labels(source=source).set(count)
 
     # dbt test results from run_results.json
-    dbt_gauge = Gauge(
-        "pipeline_dbt_test_results",
-        "Count of dbt test results by status",
-        ["status"],
-        registry=registry,
-    )
-    dbt_counts = _parse_dbt_results(dbt_results_path)
-    for status, count in dbt_counts.items():
-        dbt_gauge.labels(status=status).set(count)
+    _dbt_results_gauge(registry, dbt_results_path)
 
-    url = _pushgateway_url()
-    PUSH_TIMEOUT = 5  # seconds
-    push_to_gateway(url, job="reckon_pipeline", registry=registry, timeout=PUSH_TIMEOUT)
-    print(f"[telemetry] Metrics pushed to {url}")
+    # Clear any standing failure so PipelineRunFailure resolves.
+    _run_failed_gauge(registry).set(0)
+
+    _push(registry)
+
+
+def _do_push_failure(dbt_results_path: str | None):
+    from prometheus_client import CollectorRegistry
+
+    registry = CollectorRegistry()
+    _run_failed_gauge(registry).set(1)
+    # Only report dbt results if the run actually got that far. Pushing zeroes
+    # for a run that died during ingest would erase the previous run's real
+    # test counts and silence PipelineDbtTestFailure.
+    if dbt_results_path:
+        _dbt_results_gauge(registry, dbt_results_path)
+    _push(registry)
 
 
 def _parse_dbt_results(path: str | None) -> dict[str, int]:

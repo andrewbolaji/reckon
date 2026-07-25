@@ -1,62 +1,62 @@
 #!/usr/bin/env bash
+# One full pipeline run, executed through Dagster.
+#
+# This is the non-daemon path: the docker compose one-shot that seeds the
+# warehouse before the API and Metabase start, and the Kubernetes CronJob that
+# triggers runs on the cluster. Both execute the same `reckon_full_refresh` job
+# the schedule runs, against the same asset definitions, so retries, lineage,
+# and the dbt trust gate behave identically wherever a run is triggered from.
+#
+# Scheduling itself now belongs to Dagster (orchestration/schedules.py). What is
+# left here is a trigger and the metrics push, because with no daemon watching,
+# no sensor fires and nothing would otherwise reach Prometheus.
 set -euo pipefail
 
 DBT_TARGET="${DBT_TARGET:-dev}"
+DAGSTER_MODULE="orchestration.definitions"
+JOB="reckon_full_refresh"
 
-echo "=== Reckon Pipeline (target: ${DBT_TARGET}) ==="
-echo ""
-
-echo "[Step 1] Running ingestion (extract + load)..."
 cd /app
-python -m ingest.pipeline
 
+# The window to materialise. Defaults to the whole demo window so a first boot
+# fills the warehouse exactly as the old full-refresh script did.
+read -r WINDOW_START WINDOW_END <<<"$(python -c "
+from orchestration.partitions import full_window
+print('%s %s' % full_window())
+")"
+PARTITION_START="${PIPELINE_WINDOW_START:-$WINDOW_START}"
+PARTITION_END="${PIPELINE_WINDOW_END:-$WINDOW_END}"
+
+echo "=== Reckon Pipeline (dbt target: ${DBT_TARGET}, window: ${PARTITION_START}..${PARTITION_END}) ==="
 echo ""
-echo "[Step 2] Running dbt transforms..."
-cd /app/transform
-dbt deps --profiles-dir .
-dbt build --profiles-dir . --target "${DBT_TARGET}" --full-refresh
 
-echo ""
-echo "=== Pipeline complete ==="
+START_TIME=$SECONDS
 
-# Push metrics to Pushgateway if OTEL_ENABLED=true.
-# Non-fatal: the pipeline has already succeeded at this point.
-if [ "${OTEL_ENABLED:-false}" = "true" ]; then
+# The ingest assets carry BackfillPolicy.single_run(), so the whole window runs
+# as one run rather than one run per day, and the dbt models build once after it.
+set +e
+dagster job execute \
+    -m "${DAGSTER_MODULE}" \
+    -j "${JOB}" \
+    --tags "{\"dagster/asset_partition_range_start\": \"${PARTITION_START}\", \"dagster/asset_partition_range_end\": \"${PARTITION_END}\"}"
+RUN_STATUS=$?
+set -e
+
+DURATION=$(( SECONDS - START_TIME ))
+
+# Report the outcome to the Pushgateway. Non-fatal by design: observability
+# being unavailable must never change whether the pipeline succeeded.
+if [ "${RUN_STATUS}" -eq 0 ]; then
     echo ""
-    echo "[Step 3] Pushing metrics to Pushgateway..."
-    cd /app
-    python -c "
-from ingest.telemetry import push_pipeline_metrics
-from ingest.pipeline import run as _  # noqa: already ran above
-import json, pathlib
-
-# Re-read the row counts from the raw tables (fast, just counts)
-import psycopg2, os
-conn = psycopg2.connect(
-    host=os.getenv('POSTGRES_HOST', 'warehouse'),
-    port=os.getenv('POSTGRES_PORT', '5432'),
-    dbname=os.getenv('POSTGRES_DB', 'reckon'),
-    user=os.getenv('POSTGRES_USER', 'reckon'),
-    password=os.getenv('POSTGRES_PASSWORD', 'reckon_dev'),
-)
-cur = conn.cursor()
-rows = {}
-for table, key in [('aria_calls', 'aria_calls'), ('stripe_payments', 'stripe_payments'), ('jobs', 'jobs')]:
-    cur.execute(f'SELECT count(*) FROM \"raw\".{table}')  # \"raw\" quoted: reserved word on Redshift
-    rows[key] = cur.fetchone()[0]
-cur.close()
-conn.close()
-
-# Parse dbt run_results.json for test counts
-dbt_path = '/app/transform/target/run_results.json'
-
-# Duration: use a rough estimate from the dbt artifact elapsed_time
-try:
-    data = json.loads(pathlib.Path(dbt_path).read_text())
-    duration = data.get('elapsed_time', 0)
-except Exception:
-    duration = 0
-
-push_pipeline_metrics(duration, rows, dbt_path)
-" || echo "[telemetry] Metrics push failed (non-fatal), continuing."
+    echo "=== Pipeline complete (${DURATION}s) ==="
+    python -m orchestration.report_run --status success --duration "${DURATION}" \
+        || echo "[telemetry] Success report failed (non-fatal), continuing."
+else
+    echo ""
+    echo "=== Pipeline FAILED (exit ${RUN_STATUS}) ===" >&2
+    python -m orchestration.report_run --status failure \
+        --reason "${JOB} failed (exit ${RUN_STATUS}) for window ${PARTITION_START}..${PARTITION_END}" \
+        || echo "[telemetry] Failure report failed (non-fatal), continuing." >&2
 fi
+
+exit "${RUN_STATUS}"

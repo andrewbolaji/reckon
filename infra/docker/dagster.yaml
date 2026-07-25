@@ -1,0 +1,24 @@
+# Dagster instance config.
+#
+# Deliberately the default SQLite-backed storage under $DAGSTER_HOME. Reckon's
+# local stack is one code location running one job a day, so a Postgres run
+# store would be infrastructure without a reason. What matters is that
+# DAGSTER_HOME is a mounted volume, so run history, schedule ticks, and sensor
+# cursors survive a restart instead of a schedule silently re-firing.
+
+telemetry:
+  enabled: false
+
+run_coordinator:
+  module: dagster.core.run_coordinator
+  class: QueuedRunCoordinator
+  config:
+    # One pipeline run at a time. Two concurrent runs would both truncate and
+    # reload the same raw partitions, and the loser would win.
+    max_concurrent_runs: 1
+
+retention:
+  schedule:
+    purge_after_days: 30
+  sensor:
+    purge_after_days: 30

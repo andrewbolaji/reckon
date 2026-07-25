@@ -1,0 +1,17 @@
+# Points the webserver and the daemon at one persistent code server instead
+# of each loading orchestration.definitions in its own ephemeral subprocess.
+#
+# Module-based loading (`-m orchestration.definitions`) spins up a fresh gRPC
+# subprocess per consumer, torn down after a short idle heartbeat timeout and
+# rebuilt on the next request. With two long-lived consumers (webserver,
+# daemon) both doing that independently, the daemon's sensor ticks land on a
+# code server that is mid-restart often enough to be a real failure mode, not
+# a theoretical one: it is what silently ate the first attempts at the
+# broken-source demo, with sensor ticks reporting an empty result instead of
+# pushing to the Pushgateway. One persistent server both processes dial into
+# removes the restart entirely.
+load_from:
+  - grpc_server:
+      host: dagster-code-server
+      port: 4000
+      location_name: orchestration

@@ -22,3 +22,21 @@ groups:
           description: >
             {{ $value }} dbt test(s) with status {{ $labels.status }}.
             Check the pipeline logs for details.
+
+      # Raised by the Dagster run failure sensor (orchestration/sensors.py) and
+      # by the CLI path (orchestration/report_run.py). Separate from
+      # PipelineDbtTestFailure on purpose: a dead source is not a failing test,
+      # and an alert body that says the wrong thing sends people to the wrong
+      # place. Failures also leave pipeline_last_success_timestamp alone, so a
+      # pipeline stuck failing trips PipelineFreshnessBreach as well after 48h.
+      - alert: PipelineRunFailure
+        expr: pipeline_run_failed > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "The most recent orchestrated pipeline run failed"
+          description: >
+            A Dagster run of the Reckon pipeline failed, so downstream models
+            did not rebuild and the marts are serving the previous run's data.
+            Check the failed asset in the Dagster UI, then re-materialise it.

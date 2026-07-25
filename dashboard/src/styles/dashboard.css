@@ -19,6 +19,60 @@
   gap: 11px;
 }
 
+/* ===== Freshness band ===== */
+/* Quiet when the data is current, loud when it is not. Every colour comes from
+   the tokens, so it reads correctly in both themes. */
+.freshness {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 9px 14px;
+  border-radius: 11px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  border: 1px solid transparent;
+}
+
+.freshness-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  flex: none;
+  background: currentColor;
+}
+
+.freshness-title {
+  font-weight: 650;
+}
+
+.freshness-detail {
+  color: var(--ink-2);
+}
+
+.freshness-fresh {
+  color: var(--good-chip);
+  background: var(--good-soft);
+}
+
+.freshness-warn {
+  color: var(--warn-chip);
+  background: var(--warn-soft);
+  border-color: var(--stat-warn-border);
+}
+
+.freshness-stale {
+  color: var(--bad-chip);
+  background: var(--bad-soft);
+  border-color: var(--bad-chip);
+}
+
+.freshness-stale .freshness-detail,
+.freshness-warn .freshness-detail {
+  color: inherit;
+}
+
 .brand-logo {
   width: 32px;
   height: 32px;

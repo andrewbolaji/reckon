@@ -41,6 +41,26 @@ jobs:
         working-directory: dashboard
         run: npx vitest run
 
+  # Kept in its own job: the API image builds from api/ alone, so its
+  # dependencies are installed alone too.
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install API deps
+        run: |
+          pip install -r api/requirements.txt
+          pip install pytest==8.3.2
+
+      - name: Run API tests
+        run: pytest api/tests -v
+
   lint-dbt:
     runs-on: ubuntu-latest
     steps:
@@ -61,6 +81,39 @@ jobs:
       - name: dbt parse (syntax check)
         working-directory: transform
         run: dbt parse --profiles-dir .
+
+  # Orchestration gets its own job so dagster-dbt's hard pins cannot collide
+  # with the copilot and API dependency sets in the `test` job.
+  orchestration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install orchestration deps
+        run: |
+          pip install -r orchestration/requirements.txt
+          pip install dbt-core==1.8.7 dbt-postgres==1.8.2
+          pip install -r ingest/requirements.txt
+          pip install pytest==8.3.2
+
+      - name: Build the dbt manifest
+        working-directory: transform
+        run: |
+          dbt deps --profiles-dir .
+          dbt parse --profiles-dir .
+
+      # The gate: the code location must load, with every asset, job, schedule,
+      # and sensor resolvable. Exits non-zero on any definition error.
+      - name: Validate Dagster definitions
+        run: dagster definitions validate -m orchestration.definitions
+
+      - name: Run orchestration tests
+        run: pytest orchestration/tests -v
 
   docker-build:
     runs-on: ubuntu-latest
