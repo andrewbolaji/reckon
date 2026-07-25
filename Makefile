@@ -37,6 +37,70 @@ observability-down: ## Stop observability stack and remove volumes
 test: ## Run unit tests
 	python -m pytest ingest/tests/ -v
 
+# ---------- Orchestration (Dagster) ----------
+
+# Every target runs through the venv so they work without an activated shell,
+# and against the compose warehouse and Mongo on their published host ports.
+PY            := $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo python3)
+DAGSTER       := $(shell [ -x .venv/bin/dagster ] && echo .venv/bin/dagster || echo dagster)
+DAGSTER_DEFS  := orchestration.definitions
+DAGSTER_ENV   := DAGSTER_HOME=$(CURDIR)/.dagster_home \
+                 POSTGRES_HOST=localhost POSTGRES_PORT=5432 \
+                 POSTGRES_DB=reckon POSTGRES_USER=reckon POSTGRES_PASSWORD=reckon_dev \
+                 MONGO_URI=mongodb://localhost:27017 \
+                 DATA_LAKE_PATH=$(CURDIR)/data/lake
+# The whole demo window, so one command fills the warehouse end to end.
+WINDOW_START  ?= $(shell $(PY) -c "from orchestration.partitions import full_window; print(full_window()[0])")
+WINDOW_END    ?= $(shell $(PY) -c "from orchestration.partitions import full_window; print(full_window()[1])")
+FROM          ?= $(WINDOW_START)
+TO            ?= $(WINDOW_END)
+
+.PHONY: dagster-manifest
+dagster-manifest: ## Build the dbt manifest the asset graph loads from
+	@mkdir -p $(CURDIR)/.dagster_home
+	cd transform && $(CURDIR)/.venv/bin/dbt deps --profiles-dir . \
+		&& $(CURDIR)/.venv/bin/dbt parse --profiles-dir .
+
+.PHONY: dagster-validate
+dagster-validate: dagster-manifest ## Validate the Dagster definitions (the CI gate)
+	$(DAGSTER_ENV) $(DAGSTER) definitions validate -m $(DAGSTER_DEFS)
+
+.PHONY: dagster-dev
+dagster-dev: dagster-manifest ## Open the Dagster UI at http://localhost:3000
+	$(DAGSTER_ENV) $(DAGSTER) dev -m $(DAGSTER_DEFS)
+
+## dagster-run, dagster-backfill, and dagster-break all execute inside the
+## running dagster-webserver container rather than through the host venv.
+## The daemon's schedule, sensors, and run history live in the DAGSTER_HOME
+## Docker volume; a host-side `dagster job execute` writes to a completely
+## separate local .dagster_home instead, invisible to that daemon. A run
+## started that way would never appear in the UI and would never reach the
+## failure/success sensors, no matter how correct the sensors themselves
+## are. Needs `make local` (or `make observability`) already running.
+
+.PHONY: dagster-run
+dagster-run: ## Materialise the whole DAG for the demo window (needs `make local`)
+	docker compose exec -T dagster-webserver \
+		dagster job execute -m $(DAGSTER_DEFS) -j reckon_full_refresh \
+		--tags '{"dagster/asset_partition_range_start": "$(WINDOW_START)", "dagster/asset_partition_range_end": "$(WINDOW_END)"}'
+
+.PHONY: dagster-backfill
+dagster-backfill: ## Refill an ingest window: make dagster-backfill FROM=2026-07-01 TO=2026-07-07 (needs `make local`)
+	docker compose exec -T dagster-webserver \
+		dagster asset materialize -m $(DAGSTER_DEFS) \
+		--select 'aria_calls_raw,stripe_payments_raw,mongo_jobs_raw' \
+		--partition-range '$(FROM)...$(TO)'
+
+.PHONY: dagster-break
+dagster-break: ## Demo: fail a source and watch downstream halt (SOURCE=stripe_payments_raw, needs `make local`)
+	docker compose exec -T -e RECKON_BREAK_SOURCE=$(or $(SOURCE),stripe_payments_raw) dagster-webserver \
+		dagster job execute -m $(DAGSTER_DEFS) -j reckon_full_refresh \
+		--tags '{"dagster/asset_partition_range_start": "$(WINDOW_START)", "dagster/asset_partition_range_end": "$(WINDOW_END)"}'
+
+.PHONY: dagster-test
+dagster-test: ## Run the orchestration tests
+	$(PY) -m pytest orchestration/tests -q
+
 # ---------- Infrastructure ----------
 
 .PHONY: init

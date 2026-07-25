@@ -5,6 +5,7 @@ from psycopg2.extras import execute_values
 
 from ingest.config import LakeConfig, WarehouseConfig
 from ingest.lake import read_raw
+from ingest.window import DateWindow
 
 # Dialect differences between Postgres (local dev warehouse) and Amazon
 # Redshift (prod). Redshift has no TEXT type — it silently maps TEXT to
@@ -34,12 +35,48 @@ def _raw_table_ddl(table: str, columns: list[str], wh_type: str) -> str:
     return f"CREATE TABLE IF NOT EXISTS {_RAW}.{table} ({col_defs});"
 
 
+def _partition_delete_sql(table: str, date_column: str) -> str:
+    """Build the DELETE that clears one date window from a raw table.
+
+    Pure, for the same reason as ``_raw_table_ddl``: the dialect trickiness is
+    worth testing without a warehouse.
+
+    Every raw column is stored as text and every source timestamp is ISO-8601,
+    so the first 10 characters are the calendar date. Comparing that prefix
+    beats casting: Redshift and Postgres disagree about casting malformed text
+    to a date, and a single unparseable row would fail the whole delete.
+
+    The date column is double-quoted because ``timestamp`` is both a column name
+    here and a type name in both engines.
+    """
+    return (
+        f'DELETE FROM {_RAW}.{table} '
+        f'WHERE substring("{date_column}", 1, 10) BETWEEN %s AND %s;'
+    )
+
+
 def load_to_warehouse(
-    lake: LakeConfig, wh: WarehouseConfig, source: str, table: str, columns: list[str]
+    lake: LakeConfig,
+    wh: WarehouseConfig,
+    source: str,
+    table: str,
+    columns: list[str],
+    window: DateWindow | None = None,
+    date_column: str | None = None,
 ):
-    """Load raw lake data into a warehouse raw table."""
-    records = read_raw(lake, source)
-    if not records:
+    """Load raw lake data into a warehouse raw table.
+
+    With no window this is a full refresh: truncate, then reload everything.
+    With a window only that date range is deleted and reinserted, so a backfill
+    of one week leaves every other week standing. An empty window still deletes,
+    because a refill that finds a source empty for those days must leave them
+    empty rather than leave stale rows behind.
+    """
+    if window is not None and not date_column:
+        raise ValueError("date_column is required when loading a window")
+
+    records = read_raw(lake, source, window=window)
+    if not records and window is None:
         print(f"  No records for {source}, skipping.")
         return 0
 
@@ -49,13 +86,22 @@ def load_to_warehouse(
 
     cur.execute(f"CREATE SCHEMA IF NOT EXISTS {_RAW};")
     cur.execute(_raw_table_ddl(table, columns, wh.type))
-    cur.execute(f"TRUNCATE {_RAW}.{table};")
+
+    if window is None:
+        cur.execute(f"TRUNCATE {_RAW}.{table};")
+    else:
+        cur.execute(
+            _partition_delete_sql(table, date_column),
+            (window.start_iso, window.end_iso),
+        )
 
     rows = [tuple(str(r.get(c, "")) for c in columns) for r in records]
-    insert_sql = f"INSERT INTO {_RAW}.{table} ({', '.join(columns)}) VALUES %s"
-    execute_values(cur, insert_sql, rows)
+    if rows:
+        insert_sql = f"INSERT INTO {_RAW}.{table} ({', '.join(columns)}) VALUES %s"
+        execute_values(cur, insert_sql, rows)
 
-    print(f"  Loaded {len(rows)} rows into {_RAW}.{table}")
+    scope = f" for {window}" if window else ""
+    print(f"  Loaded {len(rows)} rows into {_RAW}.{table}{scope}")
     cur.close()
     conn.close()
     return len(rows)

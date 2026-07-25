@@ -1,0 +1,11 @@
+# Dagster orchestration.
+#
+# dagster-dbt hard-pins its matching dagster version, so these three move
+# together or not at all. This pair allows dbt-core >=1.7,<1.12, which keeps the
+# repo's pinned dbt-core 1.8.7 (see infra/docker/pipeline.Dockerfile) valid with
+# no dbt upgrade.
+dagster==1.13.15
+dagster-dbt==0.29.15
+
+# The UI and the daemon that runs schedules and sensors.
+dagster-webserver==1.13.15

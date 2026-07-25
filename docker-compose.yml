@@ -1,3 +1,25 @@
+# Everything that executes Reckon assets needs the same warehouse, lake, and
+# Mongo settings: the seeding one-shot, the Dagster webserver, and the daemon
+# that owns schedules and sensors. One anchor, so they cannot drift apart.
+x-pipeline-env: &pipeline-env
+  WAREHOUSE_TYPE: ${WAREHOUSE_TYPE:-postgres}
+  POSTGRES_HOST: ${POSTGRES_HOST:-warehouse}
+  POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+  POSTGRES_DB: ${POSTGRES_DB:-reckon}
+  POSTGRES_USER: ${POSTGRES_USER:-reckon}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reckon_dev}
+  DATA_LAKE_TYPE: ${DATA_LAKE_TYPE:-local}
+  DATA_LAKE_PATH: ${DATA_LAKE_PATH:-/data/lake}
+  MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
+  MONGO_DB: ${MONGO_DB:-reckon}
+  REFERENCE_DATE: ${REFERENCE_DATE:-2026-07-16T12:00:00}
+  OTEL_ENABLED: ${OTEL_ENABLED:-false}
+  PUSHGATEWAY_URL: ${PUSHGATEWAY_URL:-http://pushgateway:9091}
+  DAGSTER_HOME: /dagster_home
+  # Names a source asset to fail on purpose, for the broken-source demo in the
+  # README. Empty means every source behaves.
+  RECKON_BREAK_SOURCE: ${RECKON_BREAK_SOURCE:-}
+
 services:
   warehouse:
     image: postgres:16-alpine
@@ -29,6 +51,8 @@ services:
       timeout: 3s
       retries: 10
 
+  # First-boot seed. Executes the same reckon_full_refresh job the schedule
+  # runs, so the API and Metabase still wait on real data before they start.
   pipeline:
     build:
       context: .
@@ -38,22 +62,89 @@ services:
         condition: service_healthy
       mongo:
         condition: service_healthy
-    environment:
-      WAREHOUSE_TYPE: ${WAREHOUSE_TYPE:-postgres}
-      POSTGRES_HOST: ${POSTGRES_HOST:-warehouse}
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      POSTGRES_DB: ${POSTGRES_DB:-reckon}
-      POSTGRES_USER: ${POSTGRES_USER:-reckon}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reckon_dev}
-      DATA_LAKE_TYPE: ${DATA_LAKE_TYPE:-local}
-      DATA_LAKE_PATH: ${DATA_LAKE_PATH:-/data/lake}
-      MONGO_URI: ${MONGO_URI:-mongodb://mongo:27017}
-      MONGO_DB: ${MONGO_DB:-reckon}
-      REFERENCE_DATE: ${REFERENCE_DATE:-2026-07-16T12:00:00}
-      OTEL_ENABLED: ${OTEL_ENABLED:-false}
-      PUSHGATEWAY_URL: ${PUSHGATEWAY_URL:-http://pushgateway:9091}
+    environment: *pipeline-env
     volumes:
       - lake_data:/data/lake
+      - dagster_home:/dagster_home
+
+  # --- Orchestration ---------------------------------------------------
+  # The webserver is the asset graph, run history, and the backfill UI. The
+  # daemon is what actually makes this an orchestrator rather than a viewer:
+  # it runs the schedule and the run-status sensors that push to Prometheus.
+  # They share DAGSTER_HOME, so both see the same runs.
+  #
+  # Both load the code location from dagster-code-server rather than each
+  # loading orchestration.definitions in its own subprocess. A subprocess
+  # loaded that way is ephemeral: it shuts itself down after a short idle
+  # heartbeat timeout and gets rebuilt on the next request, and a daemon
+  # sensor tick landing on a subprocess that is mid-restart silently reports
+  # no new runs instead of failing loud. One persistent server both dial
+  # into removes that restart, and with it the flakiness.
+
+  dagster-code-server:
+    build:
+      context: .
+      dockerfile: infra/docker/pipeline.Dockerfile
+    command: >
+      dagster api grpc -h 0.0.0.0 -p 4000 -m orchestration.definitions
+    depends_on:
+      warehouse:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    environment: *pipeline-env
+    volumes:
+      - lake_data:/data/lake
+      - dagster_home:/dagster_home
+    healthcheck:
+      # A container that has *started* has not necessarily *bound the port*.
+      # webserver and daemon depending on "started" raced this exact gap: the
+      # daemon dialed before grpc was listening, got one connection-refused,
+      # and Python's warning dedup silently swallowed every identical warning
+      # after that, so every sensor tick failed to reach the code server with
+      # nothing in the logs to say so. depends_on: service_healthy closes it.
+      test: ["CMD", "dagster", "api", "grpc-health-check", "-p", "4000"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  dagster-webserver:
+    build:
+      context: .
+      dockerfile: infra/docker/pipeline.Dockerfile
+    command: >
+      dagster-webserver -h 0.0.0.0 -p 3000 -w /app/orchestration/workspace.yaml
+    depends_on:
+      warehouse:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      dagster-code-server:
+        condition: service_healthy
+    ports:
+      - "${DAGSTER_PORT:-3000}:3000"
+    environment: *pipeline-env
+    volumes:
+      - lake_data:/data/lake
+      - dagster_home:/dagster_home
+
+  dagster-daemon:
+    build:
+      context: .
+      dockerfile: infra/docker/pipeline.Dockerfile
+    command: dagster-daemon run -w /app/orchestration/workspace.yaml
+    depends_on:
+      warehouse:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      dagster-code-server:
+        condition: service_healthy
+    environment: *pipeline-env
+    volumes:
+      - lake_data:/data/lake
+      - dagster_home:/dagster_home
 
   api:
     build:
@@ -162,6 +253,7 @@ volumes:
   pgdata:
   mongodata:
   lake_data:
+  dagster_home:
   metabase_data:
   prometheus_data:
   grafana_data:

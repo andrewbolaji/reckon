@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 
 from ingest.config import LakeConfig
 from ingest.lake import write_raw
+from ingest.window import DateWindow
 
 # Fixed reference date so generated event timestamps are identical on any run date.
 # Override with REFERENCE_DATE env var (YYYY-MM-DD) if needed.
@@ -71,9 +72,24 @@ def generate_call_records(n: int = 200, days_back: int = 30, seed: int = SEED) -
     return sorted(records, key=lambda r: r["timestamp"])
 
 
-def extract(lake_config: LakeConfig, num_records: int = 200) -> str:
-    """Generate and land Aria call records in the data lake."""
+def extract(
+    lake_config: LakeConfig,
+    num_records: int = 200,
+    window: DateWindow | None = None,
+) -> str:
+    """Generate and land Aria call records in the data lake.
+
+    With a window, the full seeded set is generated and then filtered to those
+    days. Generating first and filtering second is deliberate: the RNG stream is
+    what makes the data deterministic, so a backfilled day yields byte-identical
+    records to the ones a full refresh would have produced for that day.
+    """
     records = generate_call_records(num_records)
-    path = write_raw(lake_config, "aria_calls", records)
-    print(f"  Extracted {len(records)} Aria call records -> {path}")
+    if window is not None:
+        records = [r for r in records if window.contains(r["timestamp"])]
+    path = write_raw(
+        lake_config, "aria_calls", records, window=window, date_field="timestamp"
+    )
+    scope = f" for {window}" if window else ""
+    print(f"  Extracted {len(records)} Aria call records{scope} -> {path}")
     return path

@@ -2,6 +2,7 @@
 
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 import psycopg2
 import psycopg2.extras
@@ -9,6 +10,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from telemetry import init_telemetry
+
+# The same thresholds the copilot refuses on (copilot/trust_gate.py), dbt's
+# source freshness config (transform/models/staging/sources.yml), and the
+# Dagster freshness policies on the marts (orchestration/assets_dbt.py). They
+# are repeated rather than imported because the API image builds from the api/
+# directory alone; api/tests/test_freshness.py fails if they ever drift.
+FRESHNESS_WARN_HOURS = 24
+FRESHNESS_ERROR_HOURS = 48
+
+# "raw" is a reserved word on Redshift, so the schema is always double-quoted
+# (same reason as ingest/loader.py).
+FRESHNESS_SOURCES = [
+    ("aria_calls", '"raw".aria_calls'),
+    ("stripe_payments", '"raw".stripe_payments'),
+    ("jobs", '"raw".jobs'),
+]
 
 
 def get_conn():
@@ -49,6 +66,73 @@ def query(sql: str) -> list[dict]:
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+def classify_age(age_hours: float | None) -> str:
+    """Bucket a source's age into fresh, warn, or stale.
+
+    Pure, so the thresholds are testable without a warehouse. An unknown age
+    (nothing ever loaded) is stale, not fresh: absence of data is not evidence
+    of freshness.
+    """
+    if age_hours is None:
+        return "stale"
+    if age_hours > FRESHNESS_ERROR_HOURS:
+        return "stale"
+    if age_hours > FRESHNESS_WARN_HOURS:
+        return "warn"
+    return "fresh"
+
+
+@app.get("/api/freshness")
+def freshness():
+    """How old the warehouse data is, per source.
+
+    The dashboard renders this as a banner so a stale dashboard says it is
+    stale instead of quietly presenting old numbers as current. Age is measured
+    from ``_loaded_at``, the moment the pipeline landed the row, not from the
+    event timestamps, which is the same basis the copilot's trust gate uses.
+    """
+    now = datetime.now(timezone.utc)
+    sources = []
+
+    for name, table in FRESHNESS_SOURCES:
+        rows = query(f"SELECT MAX(_loaded_at) AS last_loaded FROM {table}")
+        last_loaded = rows[0]["last_loaded"] if rows else None
+
+        if last_loaded is None:
+            sources.append({
+                "name": name,
+                "last_loaded": None,
+                "age_hours": None,
+                "status": classify_age(None),
+            })
+            continue
+
+        if last_loaded.tzinfo is None:
+            last_loaded = last_loaded.replace(tzinfo=timezone.utc)
+        age_hours = (now - last_loaded).total_seconds() / 3600
+
+        sources.append({
+            "name": name,
+            "last_loaded": last_loaded.isoformat(),
+            "age_hours": round(age_hours, 1),
+            "status": classify_age(age_hours),
+        })
+
+    # The dashboard is only as fresh as its stalest source, so the overall
+    # status is the worst one rather than an average.
+    order = {"fresh": 0, "warn": 1, "stale": 2}
+    overall = max((s["status"] for s in sources), key=lambda s: order[s], default="stale")
+    ages = [s["age_hours"] for s in sources if s["age_hours"] is not None]
+
+    return {
+        "status": overall,
+        "age_hours": max(ages) if ages else None,
+        "warn_after_hours": FRESHNESS_WARN_HOURS,
+        "stale_after_hours": FRESHNESS_ERROR_HOURS,
+        "sources": sources,
+    }
 
 
 @app.get("/api/call-funnel")

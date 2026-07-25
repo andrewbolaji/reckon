@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 
 from ingest.config import LakeConfig
 from ingest.lake import write_raw
+from ingest.window import DateWindow
 
 # Fixed reference date (same anchor as aria_calls for consistent demo data).
 REFERENCE_DATE = datetime.fromisoformat(
@@ -66,9 +67,23 @@ def generate_payment_records(n: int = 150, days_back: int = 30, seed: int = SEED
     return sorted(records, key=lambda r: r["timestamp"])
 
 
-def extract(lake_config: LakeConfig, num_records: int = 150) -> str:
-    """Generate and land Stripe payment records in the data lake."""
+def extract(
+    lake_config: LakeConfig,
+    num_records: int = 150,
+    window: DateWindow | None = None,
+) -> str:
+    """Generate and land Stripe payment records in the data lake.
+
+    Same generate-then-filter order as the Aria extractor, and for the same
+    reason: the seeded RNG stream is what keeps a backfilled day identical to
+    the full-refresh version of that day.
+    """
     records = generate_payment_records(num_records)
-    path = write_raw(lake_config, "stripe_payments", records)
-    print(f"  Extracted {len(records)} Stripe payment records -> {path}")
+    if window is not None:
+        records = [r for r in records if window.contains(r["timestamp"])]
+    path = write_raw(
+        lake_config, "stripe_payments", records, window=window, date_field="timestamp"
+    )
+    scope = f" for {window}" if window else ""
+    print(f"  Extracted {len(records)} Stripe payment records{scope} -> {path}")
     return path

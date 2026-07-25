@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./styles/tokens.css";
 import "./styles/dashboard.css";
+import FreshnessBanner from "./components/FreshnessBanner.jsx";
 import HeroPanel from "./components/HeroPanel.jsx";
 import KpiCards from "./components/KpiCards.jsx";
 import FunnelChart from "./components/FunnelChart.jsx";
@@ -19,6 +20,7 @@ export default function App() {
   const [funnel, setFunnel] = useState([]);
   const [revenue, setRevenue] = useState([]);
   const [services, setServices] = useState([]);
+  const [freshness, setFreshness] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -39,6 +41,16 @@ export default function App() {
         setServices(sv);
       })
       .catch((e) => setError(e.message));
+  }, []);
+
+  // Fetched separately from the charts on purpose. If the freshness check
+  // itself fails, the dashboard should still render its data rather than go
+  // blank, and the missing band is its own signal.
+  useEffect(() => {
+    fetch(`${API}/freshness`)
+      .then((r) => r.json())
+      .then(setFreshness)
+      .catch(() => setFreshness(null));
   }, []);
 
   function toggleTheme() {
@@ -70,6 +82,8 @@ export default function App() {
         </div>
         <ThemeToggle theme={theme} onToggle={toggleTheme} />
       </div>
+
+      <FreshnessBanner freshness={freshness} />
 
       <div className="bento">
         <HeroPanel summary={summary} revenue={revenue} />

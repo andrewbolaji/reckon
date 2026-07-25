@@ -8,6 +8,7 @@ node_modules/
 dist/
 target/
 dbt_packages/
+package-lock.yml
 logs/
 data/lake/
 *.egg-info/
@@ -26,3 +27,4 @@ data/lake/
 
 # dbt per-user id
 .user.yml
+/.dagster_home/

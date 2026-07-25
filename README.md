@@ -27,6 +27,10 @@ graph TB
         O[MongoDB<br/>Service Jobs]
     end
 
+    subgraph OR["Orchestration (Phase 6)"]
+        P[Dagster<br/>assets + schedule + sensors]
+    end
+
     subgraph IL["Ingestion Layer"]
         C[Python Extractors]
         D[Data Lake<br/>Local FS / S3]
@@ -69,10 +73,14 @@ graph TB
     I --> L
     I --> M
     M --> N
+    P -.orchestrates.-> C
+    P -.orchestrates.-> F
+    P -.orchestrates.-> G
 
     style H fill:#fbbf24,stroke:#92400e,color:#000
     style M fill:#818cf8,stroke:#4338ca,color:#fff
     style N fill:#818cf8,stroke:#4338ca,color:#fff
+    style P fill:#22c55e,stroke:#166534,color:#000
 ```
 
 ### AWS Cloud Architecture (Phase 2)
@@ -138,6 +146,11 @@ Reckon/
 │   ├── models/marts/        # Business-logic tables
 │   ├── dbt_project.yml
 │   └── profiles.yml         # Config-driven (Postgres / Redshift)
+├── orchestration/           # Dagster project (Phase 6)
+│   ├── assets_ingest.py     # The three source ingestions as partitioned assets
+│   ├── assets_dbt.py        # Every dbt model, auto-loaded from the manifest
+│   ├── jobs.py, schedules.py, sensors.py
+│   └── tests/
 ├── warehouse/init/          # DDL scripts for schema init
 ├── api/                     # FastAPI serving layer
 ├── dashboard/               # React + Recharts dashboard
@@ -544,6 +557,114 @@ Every model has dbt tests that enforce:
 
 The pipeline uses `dbt build`, which runs tests inline. A failing test stops downstream models from materializing.
 
+## Orchestration (Phase 6)
+
+The pipeline used to be a shell script run by cron: extract, load, `dbt build`, done, with no
+DAG and no per-step retry. A failed Aria extract still let dbt build the marts on stale raw
+data, and a missed window meant re-running everything. [Dagster](https://dagster.io) replaces
+that scheduling layer. The three source ingestions and every dbt model are software-defined
+assets in **one graph**, so a broken source visibly halts its downstream models instead of
+silently poisoning them.
+
+<p align="center">
+  <img src="docs/img/dagster-asset-graph.png" alt="Dagster asset graph: ingest sources flowing into staging then marts" width="720" />
+</p>
+
+`dagster-dbt` loads every dbt model straight from the project's own manifest, so adding a
+model to `transform/` adds a node here with no orchestration change. A custom translator maps
+dbt's `raw.aria_calls` / `raw.stripe_payments` / `raw.jobs` sources onto the ingest assets that
+actually produce them, which is what fuses the two halves into one DAG rather than two.
+
+**Freshness** on the three marts is `FreshnessPolicy.time_window(fail_window=48h,
+warn_window=24h)`, the same thresholds the copilot's trust gate and dbt's own source freshness
+config already enforce (`copilot/trust_gate.py`, `transform/models/staging/sources.yml`), so
+Dagster's idea of stale and the copilot's idea of stale cannot drift apart.
+
+**Retries** on ingest are exponential with jitter (3 attempts, 2s base delay), so a transient
+source outage recovers on its own before anyone gets paged.
+
+### One command
+
+```bash
+make local          # docker compose up --build
+make dagster-run    # materialises the full DAG for the whole demo window
+```
+
+`make dagster-run` runs `dagster job execute` over `reckon_full_refresh` with the demo's whole
+date range passed as a partition range, so one command does what the old cron script did: fill
+the warehouse end to end. The Dagster UI is at http://localhost:3000.
+
+### Backfill
+
+Ingest assets are daily-partitioned with `BackfillPolicy.single_run()`, so a missed window
+refills with one command instead of a full re-run:
+
+```bash
+make dagster-backfill FROM=2026-07-01 TO=2026-07-07
+```
+
+This does a scoped `DELETE ... WHERE <date> BETWEEN ...` then re-inserts, verified by checking
+`_loaded_at`: only the targeted week's rows get a fresh timestamp, every other day's rows (and
+their counts) are untouched.
+
+### Broken-source demo
+
+`RECKON_BREAK_SOURCE` names an ingest asset to fail on purpose:
+
+```bash
+make observability                          # Prometheus, Grafana, Pushgateway
+make dagster-break SOURCE=stripe_payments_raw
+```
+
+What actually happens, in order:
+
+1. `stripe_payments_raw` raises, retries three times with visible exponential backoff, then
+   fails for good.
+2. `reckon_dbt_assets` never starts. Dagster logs `Dependencies for step reckon_dbt_assets
+   failed: ['stripe_payments_raw']. Not executing.` The marts keep serving the last good run's
+   numbers instead of rebuilding on a stale raw table.
+3. The run-failure sensor pushes `pipeline_run_failed=1` to the same Pushgateway the pipeline
+   has always used, which is what makes `PipelineRunFailure` fire in the existing Prometheus,
+   on the existing Alertmanager email receiver, so orchestration and observability read as one
+   system, not two.
+
+<p align="center">
+  <img src="docs/img/dagster-alert-firing.png" alt="PipelineRunFailure firing in Prometheus" width="600" />
+</p>
+
+4. The dashboard stays honest about it. `/api/freshness` reports each source's own age, so a
+   source that failed to load shows its true last-good timestamp instead of a fresh badge it
+   didn't earn:
+
+<p align="center">
+  <img src="docs/img/dagster-stale-banner.png" alt="Dashboard showing a stale-but-honest freshness banner" width="720" />
+</p>
+
+Re-running the source clears both: the success sensor pushes `pipeline_last_success_timestamp`
+and resets `pipeline_run_failed=0`, the alert resolves, and the banner goes fresh again. Only
+the success path touches that timestamp, so a pipeline stuck failing trips
+`PipelineFreshnessBreach` on its own once 48 hours pass, with no separate check required.
+
+### Gotchas worth knowing
+
+- **`dagster job execute`/`job launch` runs still need `monitor_all_code_locations=True`** on
+  both sensors. Without it, a run started from the CLI (rather than launched by the webserver
+  from its own loaded workspace) doesn't reliably carry an origin the sensor considers "this
+  code location," so the sensor's cursor advances past every failure while never once calling
+  the decorated function, with no error, just silence.
+- **The webserver and daemon load the code location from one persistent `dagster-code-server`**
+  (`orchestration/workspace.yaml`), not each from their own `-m orchestration.definitions`
+  subprocess. A module-loaded subprocess is ephemeral: it shuts down after a short idle
+  heartbeat and rebuilds on the next request, and a sensor tick landing on a subprocess mid
+  restart silently reports nothing instead of failing loud. One persistent server both dial
+  into, gated by a real gRPC health check in `depends_on`, removes the restart entirely.
+- **Sensors and the daily schedule need `default_status=DefaultSensorStatus.RUNNING` /
+  `DefaultScheduleStatus.RUNNING`.** Dagster's default is stopped until someone flips it on in
+  the UI, so a fresh deployment's first failure would otherwise never reach the Pushgateway.
+- On EKS the CronJob still triggers the run, invoking the Dagster job instead of the shell
+  script; an in-cluster daemon and webserver are the next step, so cluster-side failure
+  alerting for now comes from the pod failing, not a sensor.
+
 ## Observability
 
 All observability services run behind a Docker Compose profile. The core stack (`docker compose up`) is unchanged. To enable observability:
@@ -663,6 +784,15 @@ To forward logs to Splunk via HEC, set `SPLUNK_HEC_URL` and `SPLUNK_HEC_TOKEN` i
 - [x] Both Prometheus alert rules ported into the cluster stack (`PipelineFreshnessBreach`, `PipelineDbtTestFailure`) as a PrometheusRule
 - [x] Alertmanager with a real email receiver — the freshness breach actually notifies (SMTP creds injected at install, never committed)
 
+### Phase 6: Orchestration
+- [x] Dagster project (`orchestration/`): the three ingestions and every dbt model as software-defined assets in one graph, dbt models auto-loaded from the manifest via `dagster-dbt`
+- [x] Freshness policies on the marts matching the trust gate (warn 24h, fail 48h); retries with exponential backoff and jitter on ingest; one daily schedule materialising the whole DAG
+- [x] Backfill support: daily-partitioned ingest assets, a missed window refilled with one command (`make dagster-backfill FROM=... TO=...`)
+- [x] Failure wiring into the existing alerting: a failed run pushes to the same Pushgateway, trips the same `PipelineRunFailure` Prometheus rule and Alertmanager email receiver
+- [x] `GET /api/freshness` and a dashboard banner, so a source that failed to load reads its true age instead of a fresh badge it didn't earn
+- [x] `dagster definitions validate` as a CI gate, in its own job so `dagster-dbt`'s pins can't collide with the rest of the dependency sets
+- [x] Broken-source demo (`make dagster-break SOURCE=...`): retries, halted downstream, firing alert, stale-but-honest dashboard, all screenshotted above
+
 ## Tech Stack
 
 | Layer         | Technology                              |
@@ -680,6 +810,7 @@ To forward logs to Splunk via HEC, set `SPLUNK_HEC_URL` and `SPLUNK_HEC_TOKEN` i
 | Cloud storage | AWS S3 (data lake), Redshift Serverless |
 | Registry      | AWS ECR                                 |
 | Networking    | VPC, NAT Gateway, Security Groups, IAM  |
+| Orchestration | Dagster, dagster-dbt                    |
 | Observability | OpenTelemetry, Prometheus, Grafana, Loki, Promtail |
 | CI/CD         | GitHub Actions, Makefile                |
 | AI Copilot    | MCP, Claude, Anthropic SDK               |
