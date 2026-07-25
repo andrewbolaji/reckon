@@ -94,12 +94,17 @@ jobs:
         with:
           python-version: "3.12"
 
+      # One resolver call, not four sequential ones. dbt's dependencies cap
+      # protobuf below 5.0, and separate `pip install` calls don't re-resolve
+      # already-installed transitive packages against a later call's
+      # constraints: split across calls, pip can leave an unpinned dagster
+      # dependency (grpcio-health-checking) on a release that needs a newer
+      # protobuf than dbt allows, and `dagster definitions validate` fails
+      # with an ImportError with nothing pointing at a version conflict.
       - name: Install orchestration deps
         run: |
-          pip install -r orchestration/requirements.txt
-          pip install dbt-core==1.8.7 dbt-postgres==1.8.2
-          pip install -r ingest/requirements.txt
-          pip install pytest==8.3.2
+          pip install -r orchestration/requirements.txt -r ingest/requirements.txt \
+            dbt-core==1.8.7 dbt-postgres==1.8.2 pytest==8.3.2
 
       - name: Build the dbt manifest
         working-directory: transform

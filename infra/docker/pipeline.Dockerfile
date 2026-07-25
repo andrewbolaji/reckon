@@ -3,12 +3,19 @@ FROM python:3.12-slim
 # Install Python deps for ingest + dbt + Dagster.
 # dagster-dbt pins its matching dagster version, and that pair allows
 # dbt-core >=1.7,<1.12, so the dbt pins below stay valid.
+#
+# One pip install call, not three sequential ones. dbt's own dependencies cap
+# protobuf below 5.0; dagster pulls in grpcio-health-checking with no pin of
+# its own, and a *separate* `pip install` for it doesn't re-resolve against
+# constraints from an earlier call, so it can land on a release that needs a
+# newer protobuf than dbt allows. Reproduced locally: split calls in this
+# exact order still resolved an incompatible pair even though dbt already
+# went first, one resolver call across everything is what actually fixes it.
 WORKDIR /app
 COPY ingest/requirements.txt /app/ingest/requirements.txt
 COPY orchestration/requirements.txt /app/orchestration/requirements.txt
-RUN pip install --no-cache-dir -r /app/ingest/requirements.txt \
-    && pip install --no-cache-dir dbt-core==1.8.7 dbt-postgres==1.8.2 dbt-redshift==1.8.1 \
-    && pip install --no-cache-dir -r /app/orchestration/requirements.txt
+RUN pip install --no-cache-dir -r /app/ingest/requirements.txt -r /app/orchestration/requirements.txt \
+    dbt-core==1.8.7 dbt-postgres==1.8.2 dbt-redshift==1.8.1
 
 # Copy source code
 COPY ingest/ /app/ingest/
