@@ -245,22 +245,24 @@ cp infra/terraform/terraform.tfvars.example infra/terraform/terraform.tfvars
 export REDSHIFT_USER=reckon_admin
 export REDSHIFT_PASSWORD=your_password_here
 
-# 3. Deploy everything (Terraform + ECR push + Helm install)
+# 3. Start the guided deployment (Terraform asks for approval)
 make up
 
-# 4. Trigger the first pipeline run
-make pipeline-run
-
-# 5. Check status
+# 4. Check status after the post-install seed job completes
 make status
 ```
 
-The `make up` command:
+`make up` is a guided lifecycle, not an unattended deploy: Terraform prompts
+before provisioning and the password must already exist in `terraform.tfvars`.
+The target then:
+
 1. Runs `terraform init` and `terraform apply` (VPC, EKS, Redshift, S3, ECR, IAM)
-2. Builds all 3 Docker images and pushes to ECR
+2. Builds all 3 linux/amd64 images with the current commit SHA and pushes them to ECR
 3. Updates kubeconfig for the new EKS cluster
-4. Helm-installs the chart with all Terraform outputs wired in
-5. Prints the LoadBalancer URLs for API and dashboard
+4. Installs cluster monitoring
+5. Creates the warehouse Secret outside Helm, then installs the application chart
+6. Runs a post-install pipeline Job; deployment fails if the warehouse cannot be seeded
+7. Prints the LoadBalancer URLs for API and dashboard
 
 ### Access
 
@@ -521,7 +523,7 @@ Safety lives in the tools and the database role, not in the prompt:
 - **Indirect prompt injection**: if an attacker can write data that ends up in a mart (e.g. a malicious service description), the LLM might follow embedded instructions. No runtime content filter is in place. Mitigation depends on input validation upstream of the warehouse.
 - **No request rate limiting**: a user (or automated client) can call tools as fast as the MCP transport allows. No per-user or per-minute throttle exists. In production, add rate limiting at the transport or API gateway layer.
 - **Single-tenant demo**: there is one DB role, one set of credentials, and no multi-tenant row-level security. All users see all marts data. Production would need tenant isolation.
-- **Credential storage**: DB passwords are passed via environment variables and `.env` files, not a secrets manager. Acceptable for local dev; production should use AWS Secrets Manager or equivalent.
+- **Credential storage**: local DB passwords come from environment variables/`.env`; warehouse credentials are streamed into a standalone Kubernetes Secret and never stored in Helm release history. A production deployment should use AWS Secrets Manager or equivalent.
 
 ### Run Copilot Tests
 
@@ -693,14 +695,15 @@ This starts Prometheus, Pushgateway, Grafana, Loki, and Promtail alongside the e
   <img src="docs/img/grafana-api-health.png" alt="Grafana API Health dashboard" width="720" />
 </p>
 
-**API Health**: request rate, latency percentiles (p50/p95/p99), 5xx error rate, requests by endpoint.
+**API Health**: request rate, latency percentiles (p50/p95/p99), and 5xx error rate.
 
 ### Alert Rules
 
-Two Prometheus alert rules in `observability/prometheus/alerts.yml`:
+Three Prometheus alert rules in `observability/prometheus/alerts.yml`:
 
-1. **PipelineFreshnessBreach**: fires when the pipeline has not run successfully in over 48 hours (matches the copilot's trust gate threshold).
+1. **PipelineFreshnessBreach**: fires when no successful run has ever been observed or the last success is over 48 hours old (matches the copilot's trust gate threshold).
 2. **PipelineDbtTestFailure**: fires immediately when any dbt test fails or errors.
+3. **PipelineRunFailure**: fires immediately when the most recent orchestrated run fails.
 
 ### Cluster Monitoring (EKS)
 
@@ -726,9 +729,8 @@ and pod health for the `reckon` namespace.
   <img src="docs/img/grafana-reckon-health.png" alt="Grafana Reckon Health dashboard on EKS" width="720" />
 </p>
 
-Both alert rules (`PipelineFreshnessBreach`, `PipelineDbtTestFailure`) run in the
-cluster Prometheus, and Alertmanager is wired to a real email receiver so the freshness
-breach actually notifies.
+All three alert rules run in the cluster Prometheus, and Alertmanager is wired
+to a real email receiver so freshness and run failures actually notify.
 
 ### Splunk Forwarding
 
@@ -760,7 +762,7 @@ To forward logs to Splunk via HEC, set `SPLUNK_HEC_URL` and `SPLUNK_HEC_TOKEN` i
 - [x] Metabase for self-serve BI (auto-provisioned warehouse connection)
 - [x] Idempotent lake writes and deterministic seed data
 - [x] OpenTelemetry instrumentation (API RED metrics, pipeline counters), config-gated via `OTEL_ENABLED`
-- [x] Prometheus scraping API and Pushgateway; alert rules for freshness breach and dbt test failure
+- [x] Prometheus scraping API and Pushgateway; alert rules for missing/stale freshness, dbt test failure, and run failure
 - [x] Grafana dashboards auto-provisioned: Pipeline Health and API Health
 - [x] Loki for centralized logs via Promtail, with Splunk HEC forwarding documented
 - [x] All observability behind `profiles: [observability]`. `make observability` to enable, zero impact on core stack
@@ -816,4 +818,3 @@ To forward logs to Splunk via HEC, set `SPLUNK_HEC_URL` and `SPLUNK_HEC_TOKEN` i
 | AI Copilot    | MCP, Claude, Anthropic SDK               |
 
 ---
-

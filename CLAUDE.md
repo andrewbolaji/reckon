@@ -4,7 +4,7 @@
 Reckon is a self-contained BI platform for a home-services business: a Python pipeline ingests Aria voice-agent call records, Stripe payments, and MongoDB service jobs, loads them to a Postgres or Redshift warehouse, and dbt transforms them into three marts. A FastAPI plus React dashboard and Metabase serve the data, and an MCP copilot answers plain-English questions grounded strictly in those marts.
 
 ## First 10 minutes
-Needs Python 3.12 (the version CI uses), Node 20, and Docker. Every command here was run on a clean checkout before it was written down.
+Needs Python 3.12 (the version CI uses), Node 24 LTS, and Docker. Every command here was run on a clean checkout before it was written down.
 
 ```bash
 # Python unit tests (ingest)
@@ -34,7 +34,7 @@ make local-down
 - `infra/` (terraform, helm, docker) and `observability/` are the cloud and monitoring layers.
 
 ## Gotchas
-- Bare `python` does not exist here, and psycopg2 has no wheel on 3.14. Activate `.venv` (3.12) or `make test` and dbt fail.
+- Bare `python` does not exist here, and psycopg2 has no wheel on 3.14. Use `.venv` (3.12); Make targets select its executables without requiring activation.
 - Local warehouse is Postgres, prod is Redshift. `raw` is a Redshift reserved word, so the schema is always double-quoted `"raw"` (`ingest/loader.py`, `transform/models/staging/sources.yml`). No `FILTER (WHERE)` and no `now()` default: both fail on Redshift.
 - Demo data is deterministic, anchored to `REFERENCE_DATE` with seed 42. The loader stores every raw column as text, so type bugs surface in dbt staging, not ingest. The ingest window starts 31 days back, not 30: the extractors' intraday offset can push the earliest record a day earlier than a naive 30-day window, and a full run would silently drop it.
 - Compose order matters: the pipeline is a run-once job and api and metabase wait for it, so first boot is slow while it seeds.
