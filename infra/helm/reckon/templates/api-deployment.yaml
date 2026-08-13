@@ -13,6 +13,8 @@ spec:
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
+      annotations:
+        reckon.io/warehouse-secret-revision: {{ .Values.warehouse.secretRevision | quote }}
       labels:
         app.kubernetes.io/component: api
         app.kubernetes.io/instance: {{ .Release.Name }}
@@ -30,7 +32,7 @@ spec:
             {{- end }}
           envFrom:
             - secretRef:
-                name: {{ include "reckon.fullname" . }}-secrets
+                name: {{ include "reckon.warehouseSecretName" . }}
           {{- if .Values.monitoring.enabled }}
           env:
             - name: OTEL_ENABLED

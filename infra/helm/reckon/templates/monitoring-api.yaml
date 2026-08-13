@@ -21,6 +21,7 @@ spec:
     app.kubernetes.io/component: api
     app.kubernetes.io/instance: {{ .Release.Name }}
 ---
+{{- if .Capabilities.APIVersions.Has "monitoring.coreos.com/v1/ServiceMonitor" }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -40,4 +41,5 @@ spec:
     - port: metrics
       path: /metrics
       interval: 30s
+{{- end }}
 {{- end }}

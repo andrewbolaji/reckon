@@ -23,7 +23,6 @@ data/lake/
 *.tfstate.backup
 *.tfvars
 !*.tfvars.example
-.terraform.lock.hcl
 
 # dbt per-user id
 .user.yml

@@ -143,28 +143,6 @@
           "refId": "A"
         }
       ]
-    },
-    {
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": { "defaults": {} },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
-      "id": 4,
-      "options": {
-        "showHeader": true,
-        "sortBy": [{ "displayName": "Value", "desc": true }]
-      },
-      "title": "Requests by Endpoint",
-      "type": "table",
-      "targets": [
-        {
-          "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum by (http_target) (increase(http_server_duration_milliseconds_count[1h]))",
-          "legendFormat": "{{ http_target }}",
-          "refId": "A",
-          "format": "table",
-          "instant": true
-        }
-      ]
     }
   ],
   "schemaVersion": 39,

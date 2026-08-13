@@ -24,7 +24,7 @@ spec:
           ports:
             - containerPort: {{ .Values.dashboard.port }}
           env:
-            - name: VITE_API_URL
+            - name: API_UPSTREAM
               value: "http://{{ include "reckon.fullname" . }}-api:{{ .Values.api.service.port }}"
           resources:
             {{- toYaml .Values.dashboard.resources | nindent 12 }}

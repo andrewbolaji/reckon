@@ -12,7 +12,7 @@ import ThemeToggle, {
   applyTheme,
 } from "./components/ThemeToggle.jsx";
 
-const API = "/api";
+const API = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
 
 export default function App() {
   const [theme, setTheme] = useState(getInitialTheme);
