@@ -145,10 +145,18 @@ jobs:
 
       - name: Smoke-test dashboard image
         run: |
-          container=$(docker run -d --rm --platform linux/amd64 -p 8080:8080 reckon-dashboard:ci)
+          container=$(docker run -d --name reckon-dashboard-ci \
+            --platform linux/amd64 \
+            -e API_UPSTREAM=http://127.0.0.1:8000 \
+            -p 8080:8080 \
+            reckon-dashboard:ci)
           trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
           for attempt in {1..10}; do
             curl --fail --silent http://127.0.0.1:8080/ >/dev/null && exit 0
+            if ! docker inspect --format '{{.State.Running}}' "$container" | grep -q true; then
+              docker logs "$container"
+              exit 1
+            fi
             sleep 1
           done
           docker logs "$container"
