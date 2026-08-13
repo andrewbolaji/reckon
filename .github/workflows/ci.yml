@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main]
@@ -31,7 +34,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Install dashboard deps
         working-directory: dashboard
@@ -126,10 +129,67 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build pipeline image
-        run: docker build -f infra/docker/pipeline.Dockerfile .
+        run: docker build --platform linux/amd64 -t reckon-pipeline:ci -f infra/docker/pipeline.Dockerfile .
+
+      - name: Smoke-test pipeline image
+        run: docker run --rm --platform linux/amd64 reckon-pipeline:ci dagster definitions validate -m orchestration.definitions
 
       - name: Build API image
-        run: docker build -f api/Dockerfile api/
+        run: docker build --platform linux/amd64 -t reckon-api:ci -f api/Dockerfile api/
+
+      - name: Smoke-test API image
+        run: docker run --rm --platform linux/amd64 reckon-api:ci python -c "import main; assert main.app.title == 'Reckon API'"
 
       - name: Build dashboard image
-        run: docker build -f dashboard/Dockerfile dashboard/
+        run: docker build --platform linux/amd64 -t reckon-dashboard:ci -f dashboard/Dockerfile dashboard/
+
+      - name: Smoke-test dashboard image
+        run: |
+          container=$(docker run -d --rm --platform linux/amd64 -p 8080:8080 reckon-dashboard:ci)
+          trap 'docker rm -f "$container" >/dev/null 2>&1 || true' EXIT
+          for attempt in {1..10}; do
+            curl --fail --silent http://127.0.0.1:8080/ >/dev/null && exit 0
+            sleep 1
+          done
+          docker logs "$container"
+          exit 1
+
+  infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.15.8"
+
+      - name: Check Terraform formatting
+        run: terraform -chdir=infra/terraform fmt -check -recursive
+
+      - name: Initialize Terraform without a backend
+        run: terraform -chdir=infra/terraform init -backend=false
+
+      - name: Validate Terraform
+        run: terraform -chdir=infra/terraform validate
+
+      - name: Lint application chart
+        run: helm lint infra/helm/reckon
+
+      - name: Render chart with and without monitoring CRDs
+        run: |
+          helm template reckon infra/helm/reckon > /tmp/reckon-no-crd.yaml
+          helm template reckon infra/helm/reckon \
+            --api-versions monitoring.coreos.com/v1/ServiceMonitor \
+            > /tmp/reckon-with-crd.yaml
+          test "$(grep -c 'kind: ServiceMonitor' /tmp/reckon-no-crd.yaml || true)" -eq 0
+          test "$(grep -c 'kind: ServiceMonitor' /tmp/reckon-with-crd.yaml)" -eq 2
+          test "$(grep -c 'kind: Secret' /tmp/reckon-with-crd.yaml || true)" -eq 0
+          ! grep -E 'POSTGRES_PASSWORD|REDSHIFT_PASSWORD' /tmp/reckon-with-crd.yaml
+
+      - name: Prove a missing freshness metric fires
+        run: |
+          docker run --rm \
+            -v "$PWD/observability/prometheus:/etc/prometheus:ro" \
+            --entrypoint promtool \
+            prom/prometheus:v2.53.0 \
+            test rules /etc/prometheus/alerts.test.yml
