@@ -1,11 +1,13 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
+.NOTPARALLEL: up down deploy
 
 TF_DIR       := infra/terraform
 HELM_DIR     := infra/helm/reckon
 RELEASE      := reckon
 NAMESPACE    := reckon
-TAG          ?= latest
+TAG          ?= $(shell git rev-parse --verify HEAD)
+WAREHOUSE_SECRET ?= $(RELEASE)-reckon-warehouse
 
 # ---------- Cluster Monitoring (kube-prometheus-stack) ----------
 MON_RELEASE   := kps
@@ -35,7 +37,7 @@ observability-down: ## Stop observability stack and remove volumes
 
 .PHONY: test
 test: ## Run unit tests
-	python -m pytest ingest/tests/ -v
+	$(PY) -m pytest ingest/tests/ -v
 
 # ---------- Orchestration (Dagster) ----------
 
@@ -123,6 +125,11 @@ infra-destroy: ## Destroy all AWS infrastructure
 
 .PHONY: images
 images: ## Build and push all images to ECR
+	@if [ "$(TAG)" = "$$(git rev-parse --verify HEAD)" ] && [ -n "$$(git status --porcelain)" ]; then \
+		echo ">> Refusing to publish dirty work under a commit-SHA tag." >&2; \
+		echo ">> Commit the changes or pass an explicit TAG for an intentional snapshot." >&2; \
+		exit 1; \
+	fi
 	chmod +x scripts/ecr_push.sh
 	./scripts/ecr_push.sh $(TAG)
 
@@ -144,21 +151,43 @@ helm-install: ## Install/upgrade Helm release on EKS
 	$(eval RS_DB := $(shell terraform -chdir=$(TF_DIR) output -raw redshift_db_name))
 	$(eval S3_BUCKET := $(shell terraform -chdir=$(TF_DIR) output -raw s3_data_lake_bucket))
 	$(eval REGION := $(shell terraform -chdir=$(TF_DIR) output -raw aws_region))
-	kubectl create namespace $(NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
-	helm upgrade --install $(RELEASE) $(HELM_DIR) \
+	@if [ -z "$${REDSHIFT_PASSWORD:-}" ]; then \
+		echo ">> REDSHIFT_PASSWORD must be set before helm-install" >&2; \
+		exit 1; \
+	fi
+	@kubectl create namespace $(NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
+	@set -euo pipefail; \
+		{ \
+			printf '%s\n' \
+				"WAREHOUSE_TYPE=redshift" \
+				"POSTGRES_HOST=$(RS_HOST)" \
+				"POSTGRES_PORT=$(RS_PORT)" \
+				"POSTGRES_DB=$(RS_DB)" \
+				"POSTGRES_USER=$${REDSHIFT_USER:-reckon_admin}" \
+				"POSTGRES_PASSWORD=$${REDSHIFT_PASSWORD}" \
+				"REDSHIFT_HOST=$(RS_HOST)" \
+				"REDSHIFT_PORT=$(RS_PORT)" \
+				"REDSHIFT_DB=$(RS_DB)" \
+				"REDSHIFT_USER=$${REDSHIFT_USER:-reckon_admin}" \
+				"REDSHIFT_PASSWORD=$${REDSHIFT_PASSWORD}" \
+				"DATA_LAKE_TYPE=s3" \
+				"S3_BUCKET=$(S3_BUCKET)" \
+				"AWS_REGION=$(REGION)"; \
+		} | kubectl create secret generic $(WAREHOUSE_SECRET) \
+			--namespace $(NAMESPACE) \
+			--from-env-file=/dev/stdin \
+			--dry-run=client -o yaml | kubectl apply -f -; \
+		secret_revision=$$(kubectl get secret $(WAREHOUSE_SECRET) \
+			--namespace $(NAMESPACE) -o jsonpath='{.metadata.resourceVersion}'); \
+		helm upgrade --install $(RELEASE) $(HELM_DIR) \
 		--namespace $(NAMESPACE) \
-		--set images.pipeline="$(ECR_PIPELINE):$(TAG)" \
-		--set images.api="$(ECR_API):$(TAG)" \
-		--set images.dashboard="$(ECR_DASHBOARD):$(TAG)" \
-		--set images.pullPolicy=Always \
-		--set warehouse.host="$(RS_HOST)" \
-		--set warehouse.port="$(RS_PORT)" \
-		--set warehouse.db="$(RS_DB)" \
-		--set warehouse.user="$(REDSHIFT_USER)" \
-		--set warehouse.password="$(REDSHIFT_PASSWORD)" \
-		--set lake.bucket="$(S3_BUCKET)" \
-		--set lake.region="$(REGION)" \
-		--wait --timeout 5m
+		--set-string images.pipeline="$(ECR_PIPELINE):$(TAG)" \
+		--set-string images.api="$(ECR_API):$(TAG)" \
+		--set-string images.dashboard="$(ECR_DASHBOARD):$(TAG)" \
+		--set-string images.pullPolicy=IfNotPresent \
+		--set-string warehouse.existingSecret="$(WAREHOUSE_SECRET)" \
+		--set-string warehouse.secretRevision="$${secret_revision}" \
+		--wait --timeout 20m
 
 .PHONY: helm-uninstall
 helm-uninstall: ## Uninstall Helm release
@@ -219,14 +248,14 @@ pipeline-run: ## Trigger a one-off pipeline job on EKS
 # ---------- Full Lifecycle ----------
 
 .PHONY: up
-up: init infra images kubeconfig monitoring helm-install ## Full deploy: infra + images + monitoring + Helm
+up: init infra images kubeconfig monitoring helm-install ## Guided full deploy: infra + images + monitoring + Helm
 	@echo ""
 	@echo "=== Reckon is live on AWS (with cluster monitoring) ==="
 	@echo "Dashboard: $$(kubectl get svc -n $(NAMESPACE) $(RELEASE)-reckon-dashboard -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
 	@echo "API:       $$(kubectl get svc -n $(NAMESPACE) $(RELEASE)-reckon-api -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
 	@echo "Grafana:   http://$$(kubectl get svc -n $(MON_NAMESPACE) $(MON_RELEASE)-grafana -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
 	@echo ""
-	@echo "Run 'make pipeline-run' to trigger the first pipeline execution."
+	@echo "The post-install bootstrap job seeded the warehouse."
 	@echo "Run 'make down' when done to avoid ongoing costs."
 
 .PHONY: down

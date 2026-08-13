@@ -1,6 +1,6 @@
 """Local and in-cluster alert rules must not drift apart.
 
-The same two files have to agree for the demo to mean anything: a failure
+The two rule sources have to agree for the demo to mean anything: a failure
 reproduced locally should fire the same alert the EKS cluster would fire. They
 are separate files because one is a Prometheus config and the other is Helm
 values, so nothing but a test keeps them honest.
@@ -54,3 +54,8 @@ def test_freshness_breach_still_matches_the_48_hour_trust_gate():
 
     expr = local_rules()["PipelineFreshnessBreach"]["expr"]
     assert str(FRESHNESS_ERROR_HOURS * 3600) in expr
+
+
+def test_freshness_breach_fails_closed_when_metric_is_absent():
+    expr = local_rules()["PipelineFreshnessBreach"]["expr"]
+    assert "absent(pipeline_last_success_timestamp)" in expr

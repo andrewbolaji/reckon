@@ -6,8 +6,15 @@ set -euo pipefail
 # Reads ECR URLs from Terraform outputs.
 #
 
-TAG="${1:-latest}"
+if [[ $# -eq 0 && -n "$(git status --porcelain)" ]]; then
+  echo ">> Refusing to publish dirty work under a commit-SHA tag." >&2
+  echo ">> Commit the changes or pass an explicit tag." >&2
+  exit 1
+fi
+
+TAG="${1:-$(git rev-parse --verify HEAD)}"
 TF_DIR="infra/terraform"
+PLATFORM="linux/amd64"
 
 echo "=== ECR Build & Push (tag: ${TAG}) ==="
 
@@ -25,17 +32,17 @@ aws ecr get-login-password --region "${REGION}" \
 
 # Build and push pipeline image
 echo "[2/4] Building and pushing pipeline image..."
-docker build -t "${ECR_PIPELINE}:${TAG}" -f infra/docker/pipeline.Dockerfile .
+docker build --platform "${PLATFORM}" -t "${ECR_PIPELINE}:${TAG}" -f infra/docker/pipeline.Dockerfile .
 docker push "${ECR_PIPELINE}:${TAG}"
 
 # Build and push API image
 echo "[3/4] Building and pushing API image..."
-docker build -t "${ECR_API}:${TAG}" -f api/Dockerfile api/
+docker build --platform "${PLATFORM}" -t "${ECR_API}:${TAG}" -f api/Dockerfile api/
 docker push "${ECR_API}:${TAG}"
 
 # Build and push dashboard image
 echo "[4/4] Building and pushing dashboard image..."
-docker build -t "${ECR_DASHBOARD}:${TAG}" -f dashboard/Dockerfile dashboard/
+docker build --platform "${PLATFORM}" -t "${ECR_DASHBOARD}:${TAG}" -f dashboard/Dockerfile dashboard/
 docker push "${ECR_DASHBOARD}:${TAG}"
 
 echo ""

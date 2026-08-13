@@ -36,7 +36,8 @@ kubeProxy:
 # ---------------------------------------------------------------------------
 prometheus:
   prometheusSpec:
-    retention: 6h
+    # Retain enough history to investigate the 48-hour freshness threshold.
+    retention: 72h
     scrapeInterval: 30s
     evaluationInterval: 30s
     # Discover ServiceMonitors / PodMonitors / PrometheusRules in ALL namespaces
@@ -164,15 +165,15 @@ additionalPrometheusRulesMap:
       - name: reckon-pipeline
         rules:
           - alert: PipelineFreshnessBreach
-            expr: (time() - pipeline_last_success_timestamp) > 172800
+            expr: (time() - pipeline_last_success_timestamp) > 172800 or absent(pipeline_last_success_timestamp)
             for: 5m
             labels:
               severity: critical
             annotations:
-              summary: "Pipeline has not run successfully in over 48 hours"
+              summary: "Pipeline freshness signal is missing or over 48 hours old"
               description: >
-                The last successful pipeline run was {{ $value | humanizeDuration }} ago.
-                Data freshness is breached. Run the pipeline to restore.
+                No successful pipeline run has been observed, or the last success
+                is more than 48 hours old. Run the pipeline to restore freshness.
           - alert: PipelineDbtTestFailure
             expr: pipeline_dbt_test_results{status="fail"} > 0 or pipeline_dbt_test_results{status="error"} > 0
             for: 0m

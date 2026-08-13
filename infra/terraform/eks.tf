@@ -3,7 +3,7 @@
 resource "aws_eks_cluster" "main" {
   name     = "${var.project}-cluster"
   role_arn = aws_iam_role.eks_cluster.arn
-  version  = "1.30"
+  version  = var.eks_kubernetes_version
 
   vpc_config {
     subnet_ids = concat(
@@ -54,6 +54,7 @@ resource "aws_eks_node_group" "main" {
   subnet_ids      = aws_subnet.private[*].id
 
   instance_types = [var.eks_node_instance_type]
+  ami_type       = var.eks_node_ami_type
 
   scaling_config {
     desired_size = var.eks_desired_nodes

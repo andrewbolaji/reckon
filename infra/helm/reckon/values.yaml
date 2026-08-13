@@ -7,32 +7,32 @@ images:
 
 # ---- Warehouse ----
 warehouse:
-  type: redshift      # "postgres" for local, "redshift" for cloud
-  host: ""            # Set via --set or values-prod.yaml
-  port: "5439"
-  db: "reckon"
-  user: "reckon_admin"
-  password: ""        # Set via K8s Secret or --set
-
-# ---- Data Lake ----
-lake:
-  type: s3            # "local" or "s3"
-  bucket: ""          # Set via --set
-  region: "us-east-1"
+  # Created outside Helm so credentials never enter release values, rendered
+  # manifests, or release history. `make helm-install` creates it from the
+  # caller's environment without putting the password in process arguments.
+  existingSecret: ""
+  # Non-secret Kubernetes resourceVersion used to roll the API after rotation.
+  secretRevision: ""
 
 # ---- Pipeline CronJob ----
 pipeline:
   schedule: "0 */6 * * *"   # Every 6 hours
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 900
+  ttlSecondsAfterFinished: 3600
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   dbtTarget: prod
+  bootstrap:
+    enabled: true
+    activeDeadlineSeconds: 900
 
 # ---- Monitoring (in-cluster Prometheus scraping) ----
 # When enabled, the app exposes Prometheus metrics and ships ServiceMonitors so
 # the kube-prometheus-stack Prometheus scrapes them. The API serves OTel metrics
 # on :9464; the pipeline pushes to an in-cluster Pushgateway (below), which
-# Prometheus then scrapes. Requires the ServiceMonitor CRD (installed by
-# `make monitoring`, which runs before `helm-install` in `make up`).
+# Prometheus then scrapes. ServiceMonitors render only when their CRD is
+# available, so the application chart can also install without monitoring.
 monitoring:
   enabled: true
   metricsPort: 9464
@@ -75,7 +75,7 @@ api:
 # ---- Dashboard ----
 dashboard:
   replicas: 2
-  port: 5173
+  port: 8080
   service:
     type: LoadBalancer
     port: 80

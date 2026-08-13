@@ -18,10 +18,22 @@ variable "environment" {
 
 # --- EKS ---
 
+variable "eks_kubernetes_version" {
+  description = "Kubernetes minor version for the EKS control plane and managed nodes"
+  type        = string
+  default     = "1.35"
+}
+
 variable "eks_node_instance_type" {
   description = "EC2 instance type for EKS worker nodes"
   type        = string
   default     = "t3.medium"
+}
+
+variable "eks_node_ami_type" {
+  description = "EKS managed node AMI type; Kubernetes 1.33+ uses AL2023"
+  type        = string
+  default     = "AL2023_x86_64_STANDARD"
 }
 
 variable "eks_desired_nodes" {

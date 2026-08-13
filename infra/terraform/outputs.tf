@@ -59,7 +59,7 @@ output "redshift_db_name" {
 
 output "helm_values_snippet" {
   description = "Paste into values-prod.yaml or set via --set"
-  value = <<-EOT
+  value       = <<-EOT
     warehouse:
       type: redshift
       host: ${aws_redshiftserverless_workgroup.main.endpoint[0].address}
@@ -75,5 +75,5 @@ output "helm_values_snippet" {
       api: ${aws_ecr_repository.repos["api"].repository_url}
       dashboard: ${aws_ecr_repository.repos["dashboard"].repository_url}
   EOT
-  sensitive = true
+  sensitive   = true
 }

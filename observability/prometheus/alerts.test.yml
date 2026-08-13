@@ -1,0 +1,20 @@
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - name: a never-successful pipeline fails closed
+    interval: 1m
+    input_series: []
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: PipelineFreshnessBreach
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+            exp_annotations:
+              summary: "Pipeline freshness signal is missing or over 48 hours old"
+              description: >
+                No successful pipeline run has been observed, or the last success
+                is more than 48 hours old. Run the pipeline to restore freshness.

@@ -7,11 +7,14 @@ metadata:
     app.kubernetes.io/component: pipeline
 spec:
   schedule: {{ .Values.pipeline.schedule | quote }}
+  concurrencyPolicy: {{ .Values.pipeline.concurrencyPolicy }}
+  startingDeadlineSeconds: {{ .Values.pipeline.startingDeadlineSeconds }}
   successfulJobsHistoryLimit: {{ .Values.pipeline.successfulJobsHistoryLimit }}
   failedJobsHistoryLimit: {{ .Values.pipeline.failedJobsHistoryLimit }}
   jobTemplate:
     spec:
       backoffLimit: 2
+      ttlSecondsAfterFinished: {{ .Values.pipeline.ttlSecondsAfterFinished }}
       template:
         metadata:
           labels:
@@ -20,31 +23,4 @@ spec:
         spec:
           restartPolicy: OnFailure
           containers:
-            - name: pipeline
-              image: {{ .Values.images.pipeline }}
-              imagePullPolicy: {{ .Values.images.pullPolicy }}
-              envFrom:
-                - secretRef:
-                    name: {{ include "reckon.fullname" . }}-secrets
-              env:
-                - name: DBT_TARGET
-                  value: {{ .Values.pipeline.dbtTarget | quote }}
-                {{- if .Values.mongo.enabled }}
-                - name: MONGO_URI
-                  value: "mongodb://{{ include "reckon.fullname" . }}-mongo:{{ .Values.mongo.port }}"
-                - name: MONGO_DB
-                  value: {{ .Values.mongo.db | quote }}
-                {{- end }}
-                {{- if .Values.monitoring.enabled }}
-                - name: OTEL_ENABLED
-                  value: "true"
-                - name: PUSHGATEWAY_URL
-                  value: "http://{{ include "reckon.fullname" . }}-pushgateway:{{ .Values.monitoring.pushgateway.port }}"
-                {{- end }}
-              resources:
-                requests:
-                  cpu: 250m
-                  memory: 512Mi
-                limits:
-                  cpu: "1"
-                  memory: 1Gi
+            {{- include "reckon.pipelineContainer" . | nindent 12 }}
