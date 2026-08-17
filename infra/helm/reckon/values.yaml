@@ -62,7 +62,11 @@ api:
   replicas: 2
   port: 8000
   service:
-    type: LoadBalancer
+    # ClusterIP, not LoadBalancer. The API has no authentication and holds the
+    # warehouse admin credentials, so it must not answer from a public address.
+    # Reach it with:
+    #   kubectl port-forward -n reckon svc/reckon-api 8000:80
+    type: ClusterIP
     port: 80
   resources:
     requests:
@@ -77,7 +81,11 @@ dashboard:
   replicas: 2
   port: 8080
   service:
-    type: LoadBalancer
+    # ClusterIP for the same reason as the API: the dashboard proxies to it, so
+    # publishing the dashboard publishes the unauthenticated API behind it.
+    # Reach it with:
+    #   kubectl port-forward -n reckon svc/reckon-dashboard 8080:80
+    type: ClusterIP
     port: 80
   resources:
     requests:

@@ -198,6 +198,12 @@ helm-uninstall: ## Uninstall Helm release
 
 .PHONY: monitoring
 monitoring: ## Install kube-prometheus-stack + provision dashboards (committed values, zero clicks)
+	@if [ -z "$${GRAFANA_ADMIN_PASSWORD:-}" ]; then \
+		echo ">> GRAFANA_ADMIN_PASSWORD must be set before 'make monitoring'." >&2; \
+		echo ">> Refusing to install Grafana under a password committed to this repo:" >&2; \
+		echo ">>   export GRAFANA_ADMIN_PASSWORD=\"\$$(openssl rand -base64 24)\"" >&2; \
+		exit 1; \
+	fi
 	helm repo add prometheus-community $(MON_REPO_URL) 2>/dev/null || true
 	helm repo update prometheus-community
 	kubectl create namespace $(MON_NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
@@ -209,7 +215,7 @@ monitoring: ## Install kube-prometheus-stack + provision dashboards (committed v
 	helm upgrade --install $(MON_RELEASE) $(MON_CHART) \
 		--namespace $(MON_NAMESPACE) \
 		-f $(MON_VALUES) \
-		--set-string grafana.adminPassword="$${GRAFANA_ADMIN_PASSWORD:-reckon-admin}" \
+		--set-string grafana.adminPassword="$${GRAFANA_ADMIN_PASSWORD}" \
 		--set-string alertmanager.config.global.smtp_from="$${SMTP_FROM:-$${SMTP_USER:-alerts@reckon.invalid}}" \
 		--set-string alertmanager.config.global.smtp_auth_username="$${SMTP_USER:-alerts@reckon.invalid}" \
 		--set-string alertmanager.config.global.smtp_auth_password="$${SMTP_PASSWORD:-REPLACE_AT_INSTALL}" \
@@ -218,8 +224,9 @@ monitoring: ## Install kube-prometheus-stack + provision dashboards (committed v
 	$(MAKE) dashboards
 	@echo ""
 	@echo "=== Monitoring installed ==="
-	@echo "Grafana: http://$$(kubectl get svc -n $(MON_NAMESPACE) $(MON_RELEASE)-grafana -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
-	@echo "Login:   admin / $${GRAFANA_ADMIN_PASSWORD:-reckon-admin}"
+	@echo "Grafana is ClusterIP only. Forward the port to reach it:"
+	@echo "  kubectl port-forward -n $(MON_NAMESPACE) svc/$(MON_RELEASE)-grafana 3000:80"
+	@echo "  then open http://localhost:3000 and log in as admin with GRAFANA_ADMIN_PASSWORD."
 	@echo "Dashboards (Reckon Health, Pipeline Health, API Health) provision automatically."
 
 .PHONY: dashboards
@@ -251,9 +258,10 @@ pipeline-run: ## Trigger a one-off pipeline job on EKS
 up: init infra images kubeconfig monitoring helm-install ## Guided full deploy: infra + images + monitoring + Helm
 	@echo ""
 	@echo "=== Reckon is live on AWS (with cluster monitoring) ==="
-	@echo "Dashboard: $$(kubectl get svc -n $(NAMESPACE) $(RELEASE)-reckon-dashboard -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
-	@echo "API:       $$(kubectl get svc -n $(NAMESPACE) $(RELEASE)-reckon-api -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
-	@echo "Grafana:   http://$$(kubectl get svc -n $(MON_NAMESPACE) $(MON_RELEASE)-grafana -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+	@echo "Nothing is published to the internet. Forward a port to reach each service:"
+	@echo "  Dashboard: kubectl port-forward -n $(NAMESPACE) svc/$(RELEASE)-reckon-dashboard 8080:80   then http://localhost:8080"
+	@echo "  API:       kubectl port-forward -n $(NAMESPACE) svc/$(RELEASE)-reckon-api 8000:80         then http://localhost:8000/health"
+	@echo "  Grafana:   kubectl port-forward -n $(MON_NAMESPACE) svc/$(MON_RELEASE)-grafana 3000:80    then http://localhost:3000"
 	@echo ""
 	@echo "The post-install bootstrap job seeded the warehouse."
 	@echo "Run 'make down' when done to avoid ongoing costs."

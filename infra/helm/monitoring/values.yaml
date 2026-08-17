@@ -56,17 +56,20 @@ prometheus:
         memory: 1Gi
 
 # ---------------------------------------------------------------------------
-# Grafana — LoadBalancer so the dashboards have a real URL for the screenshot.
-# Dashboards are provisioned as code via the sidecar: any ConfigMap labelled
-# `grafana_dashboard=1` in any namespace is loaded automatically (zero clicks).
+# Grafana, reachable only from inside the cluster. Dashboards are provisioned as
+# code via the sidecar: any ConfigMap labelled `grafana_dashboard=1` in any
+# namespace is loaded automatically (zero clicks). For a screenshot or a look
+# around, forward the port instead of publishing an address:
+#   kubectl port-forward -n monitoring svc/kps-grafana 3000:80
 # ---------------------------------------------------------------------------
 grafana:
   enabled: true
-  # Placeholder — overridden at install with --set from $GRAFANA_ADMIN_PASSWORD.
-  adminPassword: reckon-admin
+  # Inert placeholder. `make monitoring` refuses to install unless
+  # GRAFANA_ADMIN_PASSWORD is set, so this value is never the live password.
+  adminPassword: REPLACE_AT_INSTALL
   defaultDashboardsEnabled: false
   service:
-    type: LoadBalancer
+    type: ClusterIP
     port: 80
   sidecar:
     dashboards:

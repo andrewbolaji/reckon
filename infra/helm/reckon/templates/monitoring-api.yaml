@@ -1,7 +1,7 @@
 {{- if .Values.monitoring.enabled }}
-# Dedicated ClusterIP service for API metrics. Kept separate from the public
-# LoadBalancer so /metrics is never exposed on the internet-facing ELB — only
-# the in-cluster Prometheus reaches it, via the ServiceMonitor below.
+# Dedicated service for API metrics, kept separate from the API's own service so
+# /metrics stays off whatever the API is reached through. Only the in-cluster
+# Prometheus scrapes it, via the ServiceMonitor below.
 apiVersion: v1
 kind: Service
 metadata:
