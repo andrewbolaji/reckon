@@ -262,14 +262,26 @@ The target then:
 4. Installs cluster monitoring
 5. Creates the warehouse Secret outside Helm, then installs the application chart
 6. Runs a post-install pipeline Job; deployment fails if the warehouse cannot be seeded
-7. Prints the LoadBalancer URLs for API and dashboard
+7. Prints the port-forward command for each service
 
 ### Access
 
-| Service   | URL |
-|-----------|-----|
-| Dashboard | `kubectl get svc -n reckon reckon-reckon-dashboard -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'` |
-| API       | `kubectl get svc -n reckon reckon-reckon-api -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'` |
+Every service is `ClusterIP`, so nothing is reachable from the internet. This is
+deliberate: the API has no authentication and connects with the warehouse admin
+credentials, the dashboard proxies to that API, and in-cluster Mongo has no
+authentication either. Publishing any of them would publish all of them. Reach
+each service by forwarding its port, one terminal per service.
+
+| Service   | Command | Then open |
+|-----------|---------|-----------|
+| Dashboard | `kubectl port-forward -n reckon svc/reckon-reckon-dashboard 8080:80` | http://localhost:8080 |
+| API       | `kubectl port-forward -n reckon svc/reckon-reckon-api 8000:80` | http://localhost:8000/health |
+| Grafana   | `kubectl port-forward -n monitoring svc/kps-grafana 3000:80` | http://localhost:3000 |
+
+Making any of these internet-reachable is a separate piece of work, not a values
+change: it needs an Ingress with a TLS certificate, real authentication on the
+API, a scoped read-only warehouse role in place of `reckon_admin`, Mongo
+authentication, and NetworkPolicies.
 
 ### Redeploy (code changes only)
 
@@ -712,12 +724,16 @@ The same observability, but on the cluster itself. `make monitoring` installs
 committed values file (`infra/helm/monitoring/values.yaml`) into the `monitoring`
 namespace — Prometheus, Grafana, Alertmanager, node-exporter, and kube-state-metrics.
 It is folded into `make up`, so a full deploy comes up **with** monitoring, and
-`make down` removes it (releasing its LoadBalancer) before Terraform destroy.
+`make down` removes it before Terraform destroy. `make monitoring` refuses to run
+unless `GRAFANA_ADMIN_PASSWORD` is set, so the placeholder in the committed values
+file is never the live password.
 
 ```bash
-# Email alerts need SMTP creds (never committed) — inject at install time:
+# Grafana's admin password is required, and never committed:
+export GRAFANA_ADMIN_PASSWORD="$(openssl rand -base64 24)"
+# Email alerts need SMTP creds (never committed), injected at install time:
 export SMTP_USER=you@gmail.com SMTP_PASSWORD=<gmail-app-password> ALERT_EMAIL=you@gmail.com
-make monitoring          # or just `make up` — monitoring is included
+make monitoring          # or just `make up`, monitoring is included
 ```
 
 Dashboards provision as code (labelled ConfigMaps loaded by the Grafana sidecar) with

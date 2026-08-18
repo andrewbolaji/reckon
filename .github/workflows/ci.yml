@@ -194,6 +194,26 @@ jobs:
           test "$(grep -c 'kind: Secret' /tmp/reckon-with-crd.yaml || true)" -eq 0
           ! grep -E 'POSTGRES_PASSWORD|REDSHIFT_PASSWORD' /tmp/reckon-with-crd.yaml
 
+      - name: Prove no service is published to the internet
+        run: |
+          # The API has no authentication and holds the warehouse admin
+          # credentials, and the dashboard proxies to it. Every service must stay
+          # ClusterIP and be reached by port-forward. Fail if that ever changes.
+          ! grep -E 'type: (LoadBalancer|NodePort)' /tmp/reckon-with-crd.yaml
+          ! grep -E 'type: (LoadBalancer|NodePort)' infra/helm/monitoring/values.yaml
+
+      - name: Prove monitoring refuses a committed Grafana password
+        run: |
+          # `make monitoring` must refuse before it touches helm or kubectl when
+          # GRAFANA_ADMIN_PASSWORD is unset, rather than installing Grafana under
+          # the placeholder in the committed values file. The guard is the first
+          # line of the recipe, so this runs nothing else.
+          if env -u GRAFANA_ADMIN_PASSWORD make monitoring >/tmp/mon.log 2>&1; then
+            echo "make monitoring did not refuse a missing GRAFANA_ADMIN_PASSWORD" >&2
+            exit 1
+          fi
+          grep -q 'GRAFANA_ADMIN_PASSWORD must be set' /tmp/mon.log
+
       - name: Prove a missing freshness metric fires
         run: |
           docker run --rm \
