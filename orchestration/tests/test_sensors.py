@@ -65,6 +65,21 @@ def test_success_push_clears_a_standing_failure(gateway):
     assert gateway.pushed["pipeline_run_failed"] == 0
 
 
+def test_success_without_dbt_artifact_does_not_emit_false_zeroes(gateway):
+    """An artifact absent from this reporter is unknown, not zero tests.
+
+    A direct CLI run and an always-on sensor may live in different containers.
+    If the sensor cannot see the CLI container's dbt artifact, it must preserve
+    the real counts already pushed by the run instead of replacing them with
+    zeroes.
+    """
+    telemetry.push_run_success(duration_seconds=1, rows_by_source={})
+    assert not any(
+        key.startswith("pipeline_dbt_test_results")
+        for key in gateway.pushed
+    )
+
+
 def test_failure_push_raises_the_failure_flag(gateway):
     telemetry.push_run_failure("aria_calls_raw: source unavailable")
     assert gateway.pushed["pipeline_run_failed"] == 1

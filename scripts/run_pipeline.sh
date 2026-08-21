@@ -38,7 +38,7 @@ set +e
 dagster job execute \
     -m "${DAGSTER_MODULE}" \
     -j "${JOB}" \
-    --tags "{\"dagster/asset_partition_range_start\": \"${PARTITION_START}\", \"dagster/asset_partition_range_end\": \"${PARTITION_END}\"}"
+    --tags "{\"dagster/asset_partition_range_start\": \"${PARTITION_START}\", \"dagster/asset_partition_range_end\": \"${PARTITION_END}\", \"reckon/self_reports_outcome\": \"true\"}"
 RUN_STATUS=$?
 set -e
 
