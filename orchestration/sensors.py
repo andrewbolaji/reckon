@@ -24,10 +24,27 @@ from ingest.telemetry import push_run_failure, push_run_success
 from orchestration.assets_ingest import SOURCE_SPECS
 from orchestration.resources import DBT_RUN_RESULTS
 
+SELF_REPORTED_OUTCOME_TAG = "reckon/self_reports_outcome"
+
 
 def _dbt_results_path() -> str | None:
     """dbt's run_results.json, if this run got far enough to write one."""
     return str(DBT_RUN_RESULTS) if DBT_RUN_RESULTS.exists() else None
+
+
+def _self_reports_outcome(context) -> bool:
+    """Whether the run's caller owns its Pushgateway outcome report.
+
+    The Compose one-shot and Kubernetes CronJob have no daemon in the
+    deployment path, so scripts/run_pipeline.sh reports success or failure
+    after dagster job execute exits. In local Compose a daemon is present, and
+    its sensors can also observe that same run. The tag keeps those two valid
+    reporting paths from reporting one run twice.
+    """
+    return (
+        context.dagster_run.tags.get(SELF_REPORTED_OUTCOME_TAG, "").lower()
+        == "true"
+    )
 
 
 def _rows_by_source(context) -> dict[str, int]:
@@ -77,6 +94,10 @@ def _duration_seconds(context) -> float:
     monitor_all_code_locations=True,
 )
 def reckon_run_failure_sensor(context: RunFailureSensorContext):
+    if _self_reports_outcome(context):
+        context.log.info("Run reports its own outcome; sensor push skipped.")
+        return
+
     run = context.dagster_run
     message = (context.failure_event.message or "").strip()
     reason = f"{run.job_name} run {run.run_id} failed: {message}" if message else (
@@ -94,6 +115,10 @@ def reckon_run_failure_sensor(context: RunFailureSensorContext):
     monitor_all_code_locations=True,
 )
 def reckon_run_success_sensor(context: RunStatusSensorContext):
+    if _self_reports_outcome(context):
+        context.log.info("Run reports its own outcome; sensor push skipped.")
+        return
+
     push_run_success(
         duration_seconds=_duration_seconds(context),
         rows_by_source=_rows_by_source(context),

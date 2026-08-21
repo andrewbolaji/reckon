@@ -153,8 +153,10 @@ def _do_push_success(
     for source, count in rows_by_source.items():
         rows_gauge.labels(source=source).set(count)
 
-    # dbt test results from run_results.json
-    _dbt_results_gauge(registry, dbt_results_path)
+    # Only report dbt results when this reporter can see the run's artifact.
+    # Absence means "unknown here", not "the run executed zero tests".
+    if dbt_results_path:
+        _dbt_results_gauge(registry, dbt_results_path)
 
     # Clear any standing failure so PipelineRunFailure resolves.
     _run_failed_gauge(registry).set(0)
